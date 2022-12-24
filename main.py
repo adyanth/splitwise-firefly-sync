@@ -5,11 +5,20 @@ from splitwise.user import ExpenseUser
 from typing import Generator
 
 import os
+import requests
+
+
+def formatExpense(exp: Expense, myshare: ExpenseUser):
+    return f"Expense {exp.getDescription()} for {exp.getCurrencyCode()} {myshare.getOwedShare()} on {exp.getDate()}"
 
 
 def getExpensesAfter(sw: Splitwise, date: datetime, user: User) -> Generator[tuple[Expense, ExpenseUser, list[str]], None, None]:
     expenses: list[Expense] = sw.getExpenses(dated_after=date.isoformat())
     for exp in expenses:
+        # Skip deleted expenses
+        if exp.getDeletedAt():
+            continue
+
         # Ignore payments
         if exp.getPayment():
             continue
@@ -23,8 +32,14 @@ def getExpensesAfter(sw: Splitwise, date: datetime, user: User) -> Generator[tup
 
         # Get data, latest comment > old comment > notes
         data: str = None
-        if details := processText(exp.getDetails()):
+
+        accept_check = exp.getUpdatedBy() and exp.getUpdatedBy().getId() == user.getId()
+        accept_check = accept_check or (
+            not exp.getUpdatedBy() and exp.getCreatedBy().getId() == user.getId())
+
+        if accept_check and (details := processText(exp.getDetails())):
             data = details
+
         c: Comment
         for c in sw.getComments(exp.getId()):
             if c.getCommentedUser().getId() != user.getId():
@@ -32,32 +47,112 @@ def getExpensesAfter(sw: Splitwise, date: datetime, user: User) -> Generator[tup
             if text := processText(c.getContent()):
                 data = text
 
+        # If not found, do not process, report
+        if not data:
+            print(
+                f"-----> {formatExpense(exp, myshare)} matches, no comment found! Enter manually.")
+            continue
+        if data[0] == True:
+            data = []
+
         yield exp, myshare, data
 
 
 def processText(text: str) -> list[str]:
+    if not text:
+        return []
     split = text.split("/")
-    if split[0].lower() == "firefly":
-        return split[1:]
+    if split[0].strip().lower() == "firefly":
+        return split[1:] or [True]
     return []
 
 
+def callApi(path, method="POST", params={}, body={}, fail=True):
+    baseUrl = os.getenv("FIREFLY_URL", "http://firefly:8080")
+    token = os.getenv("FIREFLY_TOKEN")
+    headers = {"Authorization": f"Bearer {token}"}
+    res = requests.request(
+        method,
+        f"{baseUrl}/api/v1/{path}",
+        headers=headers,
+        params=params,
+        json=body,
+    )
+    if fail:
+        res.raise_for_status()
+    return res
+
+
+def addTransaction(txn: dict[str, str]):
+    body = {
+        "error_if_duplicate_hash": True,
+        "group_title": txn["description"],
+        "transactions": [txn]
+    }
+    try:
+        callApi("transactions", method="POST", body=body).json()
+    except Exception as e:
+        print(f"Transaction {txn['description']} errored, body: {body}")
+        raise
+    print(f"Added Transaction: {txn['description']}")
+
+
 def processExp(exp: Expense, myshare: ExpenseUser, data: list[str]):
-    print(exp.getDescription())
-    print(exp.getCurrencyCode())
-    print(exp.getDate())
-    print(exp.getCreatedAt())
-    # print(exp.getCategory().getName())
-    print(myshare.getOwedShare())
-    print(data)
-    print()
+    if len(data) > 0:
+        dest = data[0]
+        data = data[1:]
+    else:
+        dest = exp.getDescription()
+
+    if len(data) > 0:
+        category = data[0]
+        data = data[1:]
+    else:
+        category = os.getenv("FIREFLY_DEFAULT_CATEGORY",
+                             exp.getCategory().getName())
+
+    # TODO: Handle multiple people paying. Would need to add two transactions on Firefly.
+    if len(data) > 0:
+        source = data[0]
+        data = data[1:]
+    else:
+        if myshare.getPaidShare() != "0.0":
+            source = os.getenv("FIREFLY_DEFAULT_SPEND_ACCOUNT", "Amex")
+        else:
+            source = os.getenv(
+                "FIREFLY_DEFAULT_TRXFR_ACCOUNT", "Chase Checking")
+
+    notes = ""
+    if not processText(exp.getDetails()):
+        notes = exp.getDetails()
+
+    newTxn = {
+        "source_name": source,
+        "destination_name": dest,
+        "category_name": category,
+        "type": "withdrawal",
+        "amount": myshare.getOwedShare(),
+        "currency_code": exp.getCurrencyCode(),
+        "date": exp.getCreatedAt(),
+        "payment_date": exp.getDate(),
+        "description": exp.getDescription(),
+        "reconciled": False,
+        "notes": notes,
+        "external_url": f"{Splitwise.SPLITWISE_BASE_URL}expenses/{exp.getId()}",
+    }
+    print(
+        f"Syncing {category} {formatExpense(exp, myshare)} from {source} to {dest}")
+    if os.getenv("FIREFLY_DRY_RUN"):
+        return
+    addTransaction(newTxn)
 
 
 if __name__ == "__main__":
-    past_day = datetime.now() - timedelta(days=1)
+    past_day = datetime.now() - timedelta(days=int(os.getenv("DAYS", 1)))
     load_dotenv()
     sw = Splitwise("", "", api_key=os.getenv("SPLITWISE_TOKEN"))
     currentUser = sw.getCurrentUser()
-    print(currentUser.getFirstName())
+    print(f"User: {currentUser.getFirstName()}")
+    print(f"From: {past_day}")
     for e in getExpensesAfter(sw, past_day, currentUser):
         processExp(*e)
