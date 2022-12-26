@@ -30,6 +30,10 @@ def getExpensesAfter(sw: Splitwise, date: datetime, user: User) -> Generator[tup
         if myshare.getOwedShare() == "0.0":
             continue
 
+        # Ignore entries added by Splitwise on global settle
+        if exp.getDescription() == "Settle all balances":
+            continue
+
         # Get data, latest comment > old comment > notes
         data: str = None
 
