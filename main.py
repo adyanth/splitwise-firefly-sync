@@ -27,7 +27,7 @@ def getExpensesAfter(sw: Splitwise, date: datetime, user: User) -> Generator[tup
         myexpense = filter(lambda x: x.getId() == user.getId(), exp.getUsers())
         myshare: ExpenseUser = next(myexpense, None)
         # Ignore transactions where I paid for someone else
-        if not myshare:
+        if myshare is None:
             continue
 
         # Ignore transactions where I do not owe anything
@@ -156,8 +156,8 @@ def processExp(exp: Expense, myshare: ExpenseUser, data: list[str]):
 
 
 if __name__ == "__main__":
-    past_day = datetime.now() - timedelta(days=int(os.getenv("DAYS", 1)))
     load_dotenv()
+    past_day = datetime.now() - timedelta(days=int(os.getenv("DAYS", 1)))
     sw = Splitwise("", "", api_key=os.getenv("SPLITWISE_TOKEN"))
     currentUser = sw.getCurrentUser()
     print(f"User: {currentUser.getFirstName()}")
