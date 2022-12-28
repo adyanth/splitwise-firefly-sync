@@ -24,8 +24,12 @@ def getExpensesAfter(sw: Splitwise, date: datetime, user: User) -> Generator[tup
             continue
 
         # Get my share by userId
-        myshare: ExpenseUser = filter(
-            lambda x: x.getId() == user.getId(), exp.getUsers()).__next__()
+        myexpense = filter(lambda x: x.getId() == user.getId(), exp.getUsers())
+        myshare: ExpenseUser = next(myexpense, None)
+        # Ignore transactions where I paid for someone else
+        if not myshare:
+            continue
+
         # Ignore transactions where I do not owe anything
         if myshare.getOwedShare() == "0.0":
             continue
@@ -160,3 +164,4 @@ if __name__ == "__main__":
     print(f"From: {past_day}")
     for e in getExpensesAfter(sw, past_day, currentUser):
         processExp(*e)
+    print("Complete")
