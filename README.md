@@ -14,7 +14,7 @@ This tool syncs the expenses from [Splitwise](https://www.splitwise.com) to [Fir
 
 ## Note/Comment format
 
-Enter a note or a comment in the format `Firefly[/destination-account][/category][/source-account]`. If the destination account is not provided, the expense title will be used, which may create a new expense account on Firefly. The other two use their respective defaults from environment variables. Only the user's comments will be considered, not anyone else. If you update the transaction in any way after someone entered a note (not comment) that matches, it will be considered. Priority is latest comment > old comment > notes.
+Enter a note or a comment in the format `Firefly[/destination-account][/category][/source-account][/description]`. If the destination account is not provided, the expense title will be used, which may create a new expense account on Firefly. The next two use their respective defaults from environment variables. Description, if provided, overrides the Splitwise description. Only the user's comments will be considered, not anyone else. If you update the transaction in any way after someone entered a note (not comment) that matches, it will be considered. Priority is the latest comment > old comment > notes.
 
 ## Caveats
 

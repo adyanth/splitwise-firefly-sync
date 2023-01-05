@@ -139,6 +139,12 @@ def processExp(exp: Expense, myshare: ExpenseUser, data: list[str]):
             source = os.getenv(
                 "FIREFLY_DEFAULT_TRXFR_ACCOUNT", "Chase Checking")
 
+    if len(data) > 0 and data[0]:
+        description = data[0]
+        data = data[1:]
+    else:
+        description = exp.getDescription()
+
     notes = ""
     if not processText(exp.getDetails()):
         notes = exp.getDetails()
