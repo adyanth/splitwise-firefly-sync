@@ -2,6 +2,8 @@
 
 This tool syncs the expenses from [Splitwise](https://www.splitwise.com) to [Firefly III](https://www.firefly-iii.org) using their respective APIs.
 
+This is designed to be run as a cron job to sync the past `n` days' transactions.
+
 ## Environment Variables
 
 Set these variables either in the environment or a `.env` file along with the script. For docker, the location would be `/app/.env`.
@@ -13,6 +15,7 @@ Set these variables either in the environment or a `.env` file along with the sc
 5. `FIREFLY_DEFAULT_TRXFR_ACCOUNT=Chase`: Set the default source account to use when someone else paid for the expense in Splitwise.
 6. `FIREFLY_DEFAULT_CATEGORY`: Set the default category to use. If empty, falls back to the Splitwise category.
 7. `FIREFLY_DRY_RUN`: Set this to any value to dry run and skip the firefly API call.
+8. `SPLITWISE_DAYS=1`
 
 ## Note/Comment format
 

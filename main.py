@@ -172,7 +172,7 @@ def processExp(exp: Expense, myshare: ExpenseUser, data: list[str]):
 
 if __name__ == "__main__":
     load_dotenv()
-    past_day = datetime.now() - timedelta(days=int(os.getenv("DAYS", 1)))
+    past_day = datetime.now() - timedelta(days=int(os.getenv("SPLITWISE_DAYS", 1)))
     sw = Splitwise("", "", api_key=os.getenv("SPLITWISE_TOKEN"))
     currentUser = sw.getCurrentUser()
     print(f"User: {currentUser.getFirstName()}")
