@@ -115,13 +115,13 @@ def addTransaction(txn: dict[str, str]):
 
 
 def processExp(exp: Expense, myshare: ExpenseUser, data: list[str]):
-    if len(data) > 0:
+    if len(data) > 0 and data[0]:
         dest = data[0]
         data = data[1:]
     else:
         dest = exp.getDescription()
 
-    if len(data) > 0:
+    if len(data) > 0 and data[0]:
         category = data[0]
         data = data[1:]
     else:
@@ -129,7 +129,7 @@ def processExp(exp: Expense, myshare: ExpenseUser, data: list[str]):
                              exp.getCategory().getName())
 
     # TODO: Handle multiple people paying. Would need to add two transactions on Firefly.
-    if len(data) > 0:
+    if len(data) > 0 and data[0]:
         source = data[0]
         data = data[1:]
     else:
