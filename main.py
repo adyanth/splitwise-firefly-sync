@@ -13,7 +13,16 @@ def formatExpense(exp: Expense, myshare: ExpenseUser):
 
 
 def getExpensesAfter(sw: Splitwise, date: datetime, user: User) -> Generator[tuple[Expense, ExpenseUser, list[str]], None, None]:
-    expenses: list[Expense] = sw.getExpenses(dated_after=date.isoformat())
+    offset = 0
+    limit = 20
+    expenses: list[Expense] = []
+    while True:
+        exp = sw.getExpenses(dated_after=date.isoformat(), offset=offset, limit=limit)
+        offset += limit
+        if not exp:
+            break
+        expenses.extend(exp)
+
     for exp in expenses:
         # Skip deleted expenses
         if exp.getDeletedAt():
