@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 from splitwise import Splitwise, Expense, User, Comment
 from splitwise.user import ExpenseUser
@@ -7,15 +7,19 @@ from typing import Generator
 import os
 import requests
 
-time_now = datetime.now()
+time_now = datetime.now().astimezone()
 
 
 def formatExpense(exp: Expense, myshare: ExpenseUser):
     return f"Expense {exp.getDescription()} for {exp.getCurrencyCode()} {myshare.getOwedShare()} on {exp.getDate()}"
 
 
-def getSWUrlForId(id: str):
-    f"{Splitwise.SPLITWISE_BASE_URL}expenses/{id}"
+def getSWUrlForExpense(exp: Expense) -> str:
+    return f"{Splitwise.SPLITWISE_BASE_URL}expenses/{exp.getId()}"
+
+
+def getDate(datestr: str) -> datetime:
+    return datetime.fromisoformat(datestr.replace("Z", "+00:00"))
 
 
 def getExpensesAfter(sw: Splitwise, date: datetime, user: User) -> Generator[tuple[Expense, ExpenseUser, list[str]], None, None]:
@@ -172,12 +176,12 @@ def processExp(exp: Expense, myshare: ExpenseUser, data: list[str]):
         "type": "withdrawal",
         "amount": myshare.getOwedShare(),
         "currency_code": exp.getCurrencyCode(),
-        "date": exp.getCreatedAt(),
-        "payment_date": exp.getDate(),
+        "date": getDate(exp.getCreatedAt()).isoformat(),
+        "payment_date": getDate(exp.getDate()).isoformat(),
         "description": description,
         "reconciled": False,
         "notes": notes,
-        "external_url": getSWUrlForId(exp.getId()),
+        "external_url": getSWUrlForExpense(exp),
     }
     print(
         f"Syncing {category} {formatExpense(exp, myshare)} from {source} to {dest}")
