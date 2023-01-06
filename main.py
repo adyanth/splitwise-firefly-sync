@@ -10,7 +10,7 @@ import requests
 time_now = datetime.now().astimezone()
 
 
-def formatExpense(exp: Expense, myshare: ExpenseUser):
+def formatExpense(exp: Expense, myshare: ExpenseUser) -> str:
     return f"Expense {exp.getDescription()} for {exp.getCurrencyCode()} {myshare.getOwedShare()} on {exp.getDate()}"
 
 
@@ -108,6 +108,11 @@ def callApi(path, method="POST", params={}, body={}, fail=True):
         # https://github.com/firefly-iii/firefly-iii/issues/6829
         "Accept": "application/json",
     }
+
+    if method != "GET" and os.getenv("FIREFLY_DRY_RUN"):
+        print(f"Skipping {method} call due to dry run.")
+        return
+
     res = requests.request(
         method,
         f"{baseUrl}/api/v1/{path}",
@@ -120,21 +125,27 @@ def callApi(path, method="POST", params={}, body={}, fail=True):
     return res
 
 
-def addTransaction(txn: dict[str, str]):
+def addTransaction(newTxn: dict) -> None:
     body = {
         "error_if_duplicate_hash": True,
-        "group_title": txn["description"],
-        "transactions": [txn]
+        "group_title": newTxn["description"],
+        "transactions": [newTxn]
     }
     try:
         callApi("transactions", method="POST", body=body).json()
     except Exception as e:
-        print(f"Transaction {txn['description']} errored, body: {body}")
+        print(
+            f"Transaction {newTxn['description']} errored, body: {body}, e: {e}")
         raise
-    print(f"Added Transaction: {txn['description']}")
+    print(f"Added Transaction: {newTxn['description']}")
 
 
-def processExp(exp: Expense, myshare: ExpenseUser, data: list[str]):
+def processExpense(exp: Expense, *args) -> None:
+    newTxn: dict = getExpenseTransactionBody(exp, *args)
+    return addTransaction(newTxn)
+
+
+def getExpenseTransactionBody(exp: Expense, myshare: ExpenseUser, data: list[str]) -> dict:
     if len(data) > 0 and data[0]:
         dest = data[0]
         data = data[1:]
@@ -154,7 +165,7 @@ def processExp(exp: Expense, myshare: ExpenseUser, data: list[str]):
     else:
         description = exp.getDescription()
 
-    # TODO: Handle multiple people paying. Would need to add two transactions on Firefly.
+    # TODO(#1): Handle multiple people paying. Would need to add two transactions on Firefly.
     if len(data) > 0 and data[0]:
         source = data[0]
         data = data[1:]
@@ -184,10 +195,8 @@ def processExp(exp: Expense, myshare: ExpenseUser, data: list[str]):
         "external_url": getSWUrlForExpense(exp),
     }
     print(
-        f"Syncing {category} {formatExpense(exp, myshare)} from {source} to {dest}")
-    if os.getenv("FIREFLY_DRY_RUN"):
-        return
-    addTransaction(newTxn)
+        f"Processing {category} {formatExpense(exp, myshare)} from {source} to {dest}")
+    return newTxn
 
 
 if __name__ == "__main__":
@@ -197,6 +206,8 @@ if __name__ == "__main__":
     currentUser = sw.getCurrentUser()
     print(f"User: {currentUser.getFirstName()}")
     print(f"From: {past_day}")
+
     for e in getExpensesAfter(sw, past_day, currentUser):
-        processExp(*e)
+        processExpense(*e)
+
     print("Complete")
