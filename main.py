@@ -125,6 +125,57 @@ def callApi(path, method="POST", params={}, body={}, fail=True):
     return res
 
 
+def searchTransactions(params) -> list[dict]:
+    txns: list[dict] = []
+    page = 1
+    while True:
+        params["page"] = page
+        txn: list[dict] = callApi(
+            "search/transactions", "GET", params).json()["data"]
+        page += 1
+        if not txn:
+            break
+        txns.extend(txn)
+    return txns
+
+
+def getTransactionsAfter(date: datetime) -> dict[str, dict]:
+    days: int = (time_now - date).days
+    # https://docs.firefly-iii.org/firefly-iii/pages-and-features/search/
+    params = {"query": f'date_after:"-{days}d" any_external_url:true'}
+    txns = searchTransactions(params)
+    return {t["attributes"]["transactions"][0]["external_url"]: t for t in txns}
+
+
+def updateTransaction(newTxn: dict, oldTxnBody: dict) -> None:
+    old_id = oldTxnBody["id"]
+    oldTxnBody = oldTxnBody["attributes"]
+
+    for k, val in newTxn.items():
+        if (old := oldTxnBody["transactions"][0][k]) != val:
+            # Firefly has a lot of 0 after decimal
+            if k == "amount" and float(old) == float(val):
+                continue
+            # Firefly stores time with timezone
+            # See https://github.com/firefly-iii/firefly-iii/issues/6810
+            if k == "date" or k == "payment_date":
+                if getDate(old) == getDate(val):
+                    continue
+            break
+    else:
+        print(f"No update needed for {newTxn['description']}")
+        return
+
+    oldTxnBody["transactions"][0].update(newTxn)
+    try:
+        callApi(f"transactions/{old_id}", method="PUT", body=oldTxnBody)
+    except Exception as e:
+        print(
+            f"Transaction {newTxn['description']} errored, body: {oldTxnBody}, e: {e}")
+        raise
+    print(f"Updated Transaction: {newTxn['description']}")
+
+
 def addTransaction(newTxn: dict) -> None:
     body = {
         "error_if_duplicate_hash": True,
@@ -140,8 +191,18 @@ def addTransaction(newTxn: dict) -> None:
     print(f"Added Transaction: {newTxn['description']}")
 
 
-def processExpense(exp: Expense, *args) -> None:
+def processExpense(past_day: datetime, txns: dict[dict], exp: Expense, *args) -> None:
     newTxn: dict = getExpenseTransactionBody(exp, *args)
+    if oldTxnBody := txns.get(getSWUrlForExpense(exp)):
+        print("Updating...")
+        return updateTransaction(newTxn, oldTxnBody)
+
+    if getDate(exp.getCreatedAt()) < past_day or getDate(exp.getDate()) < past_day:
+        if search := searchTransactions({"query": f'external_url_is:"{getSWUrlForExpense(exp)}"'}):
+            print("Updating old...")
+            # TODO(#1): This would have 2 results for same splitwise expense
+            return updateTransaction(newTxn, search[0])
+    print("Adding...")
     return addTransaction(newTxn)
 
 
@@ -202,12 +263,15 @@ def getExpenseTransactionBody(exp: Expense, myshare: ExpenseUser, data: list[str
 if __name__ == "__main__":
     load_dotenv()
     past_day = time_now - timedelta(days=int(os.getenv("SPLITWISE_DAYS", 1)))
+
+    txns = getTransactionsAfter(past_day)
+
     sw = Splitwise("", "", api_key=os.getenv("SPLITWISE_TOKEN"))
     currentUser = sw.getCurrentUser()
     print(f"User: {currentUser.getFirstName()}")
     print(f"From: {past_day}")
 
     for e in getExpensesAfter(sw, past_day, currentUser):
-        processExpense(*e)
+        processExpense(past_day, txns, *e)
 
     print("Complete")
