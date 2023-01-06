@@ -7,9 +7,15 @@ from typing import Generator
 import os
 import requests
 
+time_now = datetime.now()
+
 
 def formatExpense(exp: Expense, myshare: ExpenseUser):
     return f"Expense {exp.getDescription()} for {exp.getCurrencyCode()} {myshare.getOwedShare()} on {exp.getDate()}"
+
+
+def getSWUrlForId(id: str):
+    f"{Splitwise.SPLITWISE_BASE_URL}expenses/{id}"
 
 
 def getExpensesAfter(sw: Splitwise, date: datetime, user: User) -> Generator[tuple[Expense, ExpenseUser, list[str]], None, None]:
@@ -17,7 +23,13 @@ def getExpensesAfter(sw: Splitwise, date: datetime, user: User) -> Generator[tup
     limit = 20
     expenses: list[Expense] = []
     while True:
-        exp = sw.getExpenses(dated_after=date.isoformat(), offset=offset, limit=limit)
+        # Splitwise dated_after filters by getDate, not getCreatedAt
+        # Splitwise updated_after filters by getUpdatedAt
+        # getDate is the entered date in the expense
+        # getCreatedAt is the date when the expense was created
+        # getUpdatedAt is the date when the expense was last updated
+        exp = sw.getExpenses(updated_after=date.isoformat(),
+                             offset=offset, limit=limit)
         offset += limit
         if not exp:
             break
@@ -158,10 +170,10 @@ def processExp(exp: Expense, myshare: ExpenseUser, data: list[str]):
         "currency_code": exp.getCurrencyCode(),
         "date": exp.getCreatedAt(),
         "payment_date": exp.getDate(),
-        "description": exp.getDescription(),
+        "description": description,
         "reconciled": False,
         "notes": notes,
-        "external_url": f"{Splitwise.SPLITWISE_BASE_URL}expenses/{exp.getId()}",
+        "external_url": getSWUrlForId(exp.getId()),
     }
     print(
         f"Syncing {category} {formatExpense(exp, myshare)} from {source} to {dest}")
@@ -172,7 +184,7 @@ def processExp(exp: Expense, myshare: ExpenseUser, data: list[str]):
 
 if __name__ == "__main__":
     load_dotenv()
-    past_day = datetime.now() - timedelta(days=int(os.getenv("SPLITWISE_DAYS", 1)))
+    past_day = time_now - timedelta(days=int(os.getenv("SPLITWISE_DAYS", 1)))
     sw = Splitwise("", "", api_key=os.getenv("SPLITWISE_TOKEN"))
     currentUser = sw.getCurrentUser()
     print(f"User: {currentUser.getFirstName()}")
