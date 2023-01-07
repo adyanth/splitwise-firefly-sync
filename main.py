@@ -111,7 +111,9 @@ def callApi(path, method="POST", params={}, body={}, fail=True):
 
     if method != "GET" and os.getenv("FIREFLY_DRY_RUN"):
         print(f"Skipping {method} call due to dry run.")
-        return
+        res = requests.Response()
+        res.status_code, res._content = 200, b"{}"
+        return res
 
     res = requests.request(
         method,
@@ -168,7 +170,7 @@ def updateTransaction(newTxn: dict, oldTxnBody: dict) -> None:
 
     oldTxnBody["transactions"][0].update(newTxn)
     try:
-        callApi(f"transactions/{old_id}", method="PUT", body=oldTxnBody)
+        callApi(f"transactions/{old_id}", method="PUT", body=oldTxnBody).json()
     except Exception as e:
         print(
             f"Transaction {newTxn['description']} errored, body: {oldTxnBody}, e: {e}")
