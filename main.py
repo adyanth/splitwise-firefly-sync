@@ -140,6 +140,12 @@ def processExp(exp: Expense, myshare: ExpenseUser, data: list[str]):
         category = os.getenv("FIREFLY_DEFAULT_CATEGORY",
                              exp.getCategory().getName())
 
+    if len(data) > 0 and data[0]:
+        description = data[0]
+        data = data[1:]
+    else:
+        description = exp.getDescription()
+
     # TODO: Handle multiple people paying. Would need to add two transactions on Firefly.
     if len(data) > 0 and data[0]:
         source = data[0]
@@ -150,12 +156,6 @@ def processExp(exp: Expense, myshare: ExpenseUser, data: list[str]):
         else:
             source = os.getenv(
                 "FIREFLY_DEFAULT_TRXFR_ACCOUNT", "Chase Checking")
-
-    if len(data) > 0 and data[0]:
-        description = data[0]
-        data = data[1:]
-    else:
-        description = exp.getDescription()
 
     notes = ""
     if not processText(exp.getDetails()):

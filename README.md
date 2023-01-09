@@ -21,7 +21,7 @@ Set these variables either in the environment or a `.env` file along with the sc
 
 Enter a note or a comment in the below format on Splitwise:
 
-`Firefly[/destination-account][/category][/source-account][/description]`
+`Firefly[/destination-account][/category][/description][/source-account]`
 
 If the destination account is not provided, the expense title will be used, which may create a new expense account on Firefly. The next two use their respective defaults from environment variables. Description, if provided, overrides the Splitwise description. Only the user's comments will be considered, not anyone else. If you update the transaction in any way after someone entered a note (not comment) that matches, it will be considered. Priority is for the latest comment > old comment > notes.
 
