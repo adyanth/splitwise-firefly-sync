@@ -99,7 +99,11 @@ def processText(text: str) -> list[str]:
 def callApi(path, method="POST", params={}, body={}, fail=True):
     baseUrl = os.getenv("FIREFLY_URL", "http://firefly:8080")
     token = os.getenv("FIREFLY_TOKEN")
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = {
+        "Authorization": f"Bearer {token}",
+        # https://github.com/firefly-iii/firefly-iii/issues/6829
+        "Accept": "application/json",
+    }
     res = requests.request(
         method,
         f"{baseUrl}/api/v1/{path}",
