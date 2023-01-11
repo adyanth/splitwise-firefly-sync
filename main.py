@@ -127,7 +127,7 @@ def callApi(path, method="POST", params={}, body={}, fail=True):
     return res
 
 
-def searchTransactions(params) -> list[dict]:
+def searchTransactions(params: dict[str, str]) -> list[dict]:
     txns: list[dict] = []
     page = 1
     while True:
