@@ -27,4 +27,5 @@ If the destination account is not provided, the expense title will be used, whic
 
 ## Issues
 
-See [issues](issues) for current drawbacks in the implementation.
+See [issues](https://github.com/adyanth/splitwise-firefly-sync/issues) for 
+current drawbacks in the implementation.
