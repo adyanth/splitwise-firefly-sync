@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from splitwise import Splitwise, Expense, User, Comment
 from splitwise.user import ExpenseUser
@@ -215,33 +215,33 @@ def processExpense(past_day: datetime, txns: dict[dict], exp: Expense, *args) ->
 def getExpenseTransactionBody(exp: Expense, myshare: ExpenseUser, data: list[str]) -> dict:
     if len(data) > 0 and data[0]:
         dest = data[0]
-        data = data[1:]
     else:
         dest = exp.getDescription()
+    data = data[1:]
 
     if len(data) > 0 and data[0]:
         category = data[0]
-        data = data[1:]
     else:
         category = os.getenv("FIREFLY_DEFAULT_CATEGORY",
                              exp.getCategory().getName())
+    data = data[1:]
 
     if len(data) > 0 and data[0]:
         description = data[0]
-        data = data[1:]
     else:
         description = exp.getDescription()
+    data = data[1:]
 
     # TODO(#1): Handle multiple people paying. Would need to add two transactions on Firefly.
     if len(data) > 0 and data[0]:
         source = data[0]
-        data = data[1:]
     else:
         if myshare.getPaidShare() != "0.0":
             source = os.getenv("FIREFLY_DEFAULT_SPEND_ACCOUNT", "Amex")
         else:
             source = os.getenv(
                 "FIREFLY_DEFAULT_TRXFR_ACCOUNT", "Chase Checking")
+    data = data[1:]
 
     notes = ""
     if not processText(exp.getDetails()):
