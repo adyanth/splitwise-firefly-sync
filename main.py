@@ -169,6 +169,10 @@ def updateTransaction(newTxn: dict, oldTxnBody: dict) -> None:
         return
 
     oldTxnBody["transactions"][0].update(newTxn)
+
+    # https://github.com/firefly-iii/firefly-iii/issues/6828
+    del oldTxnBody["transactions"][0]["foreign_currency_id"]
+
     try:
         callApi(f"transactions/{old_id}", method="PUT", body=oldTxnBody).json()
     except Exception as e:
