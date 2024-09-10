@@ -11,14 +11,30 @@ time_now = datetime.now().astimezone()
 
 
 def formatExpense(exp: Expense, myshare: ExpenseUser) -> str:
+    """
+    Format expense for logging.
+    :param exp: A Splitwise Expense object
+    :param myshare: A Splitwise User object
+    :return: A formatted string
+    """
     return f"Expense {exp.getDescription()} for {exp.getCurrencyCode()} {myshare.getOwedShare()} on {exp.getDate()}"
 
 
 def getSWUrlForExpense(exp: Expense) -> str:
+    """
+    Get the Splitwise URL for an expense.
+    :param exp: A Splitwise Expense object
+    :return: A Splitwise URL
+    """
     return f"{Splitwise.SPLITWISE_BASE_URL}expenses/{exp.getId()}"
 
 
 def getDate(datestr: str) -> datetime:
+    """
+    Convert ISO 8601 date string to datetime object.
+    :param datestr: An ISO 8601 date string
+    :return: A datetime object
+    """
     return datetime.fromisoformat(datestr.replace("Z", "+00:00"))
 
 
@@ -92,6 +108,11 @@ def getExpensesAfter(sw: Splitwise, date: datetime, user: User) -> Generator[tup
 
 
 def processText(text: str) -> list[str]:
+    """
+    Process expense test to get data for Firefly fields.
+    :param text: A string of text separated by "/" and starting with "Firefly"
+    :return: A list of strings. If doesn't start with "Firefly", return empty list. If no separators, return [True].
+    """
     if not text:
         return []
     split = text.split("/")
@@ -101,6 +122,15 @@ def processText(text: str) -> list[str]:
 
 
 def callApi(path, method="POST", params={}, body={}, fail=True):
+    """
+    Call Firefly API.
+    :param path: The API subpath
+    :param method: The HTTP method
+    :param params: A dictionary of query parameters
+    :param body: A dictionary of the request body
+    :param fail: Whether to raise an exception on failure
+    :return: The response object
+    """
     baseUrl = os.getenv("FIREFLY_URL", "http://firefly:8080")
     token = os.getenv("FIREFLY_TOKEN")
     headers = {
@@ -128,6 +158,11 @@ def callApi(path, method="POST", params={}, body={}, fail=True):
 
 
 def searchTransactions(params: dict[str, str]) -> list[dict]:
+    """
+    Search transactions on Firefly.
+    :param params: A dictionary of query parameters
+    :return: A list of transactions
+    """
     txns: list[dict] = []
     page = 1
     while True:
@@ -142,6 +177,11 @@ def searchTransactions(params: dict[str, str]) -> list[dict]:
 
 
 def getTransactionsAfter(date: datetime) -> dict[str, dict]:
+    """
+    Get transactions after a date.
+    :param date: A datetime object
+    :return: A dictionary of transactions indexed by external URL
+    """
     days: int = (time_now - date).days
     # https://docs.firefly-iii.org/firefly-iii/pages-and-features/search/
     params = {"query": f'date_after:"-{days}d" any_external_url:true'}
