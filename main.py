@@ -39,6 +39,12 @@ def getDate(datestr: str) -> datetime:
 
 
 def getExpensesAfter(sw: Splitwise, date: datetime, user: User) -> Generator[tuple[Expense, ExpenseUser, list[str]], None, None]:
+    """
+    Get Splitwise expenses after a date for a user.
+    :param sw: A Splitwise object
+    :param date: A datetime object, representing the date after which to get expenses
+    :param user: A Splitwise User object for whom to get expenses
+    :return: A generator of tuples of Expense, ExpenseUser, and a list of strings for Firefly fields. If no data found, return None."""
     offset = 0
     limit = 20
     expenses: list[Expense] = []
@@ -178,7 +184,7 @@ def searchTransactions(params: dict[str, str]) -> list[dict]:
 
 def getTransactionsAfter(date: datetime) -> dict[str, dict]:
     """
-    Get transactions after a date.
+    Get transactions from Firefly after a date.
     :param date: A datetime object
     :return: A dictionary of transactions indexed by external URL
     """
@@ -190,6 +196,13 @@ def getTransactionsAfter(date: datetime) -> dict[str, dict]:
 
 
 def updateTransaction(newTxn: dict, oldTxnBody: dict) -> None:
+    """
+    Update a transaction on Firefly, if needed.
+    :param newTxn: A dictionary of the new transaction body
+    :param oldTxnBody: A dictionary of the old transaction body
+    :return: None
+    :raises: Exception if the transaction update fails
+    """
     old_id = oldTxnBody["id"]
     oldTxnBody = oldTxnBody["attributes"]
 
@@ -223,6 +236,12 @@ def updateTransaction(newTxn: dict, oldTxnBody: dict) -> None:
 
 
 def addTransaction(newTxn: dict) -> None:
+    """
+    Add a transaction to Firefly.
+    :param newTxn: A dictionary of the transaction body.
+    :return: None
+    :raises: Exception if the transaction addition fails
+    """
     body = {
         "error_if_duplicate_hash": True,
         "group_title": newTxn["description"],
@@ -238,6 +257,14 @@ def addTransaction(newTxn: dict) -> None:
 
 
 def processExpense(past_day: datetime, txns: dict[dict], exp: Expense, *args) -> None:
+    """
+    Process a Splitwise expense. Update or add a transaction on Firefly.
+    :param past_day: A datetime object. Expenses before this date are ignored.
+    :param txns: A dictionary of transactions indexed by Splitwise external URL.
+    :param exp: A Splitwise Expense object.
+    :param args: A list of strings for Firefly fields.
+    :return: None
+    """
     newTxn: dict = getExpenseTransactionBody(exp, *args)
     if oldTxnBody := txns.get(getSWUrlForExpense(exp)):
         print("Updating...")
@@ -253,6 +280,12 @@ def processExpense(past_day: datetime, txns: dict[dict], exp: Expense, *args) ->
 
 
 def getExpenseTransactionBody(exp: Expense, myshare: ExpenseUser, data: list[str]) -> dict:
+    """
+    Get the transaction body for a Splitwise expense.
+    :param exp: A Splitwise Expense object
+    :param myshare: A Splitwise User object, representing the current user
+    :param data: A list of strings for Firefly fields. [dest, category, description, source]. If empty, use default values.
+    """
     if len(data) > 0 and data[0]:
         dest = data[0]
     else:
@@ -307,6 +340,9 @@ def getExpenseTransactionBody(exp: Expense, myshare: ExpenseUser, data: list[str
 
 
 if __name__ == "__main__":
+    """
+    Main function. Get Splitwise expenses after a date and process them - update or add transactions on Firefly.
+    """
     load_dotenv()
     past_day = time_now - timedelta(days=int(os.getenv("SPLITWISE_DAYS", 1)))
 
