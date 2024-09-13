@@ -40,7 +40,8 @@ def getDate(datestr: str) -> datetime:
 
 def getExpensesAfter(sw: Splitwise, date: datetime, user: User) -> Generator[tuple[Expense, ExpenseUser, list[str]], None, None]:
     """
-    Get Splitwise expenses after a date for a user.
+    Get Splitwise expenses after a date for a user. Yield a tuple of Expense, ExpenseUser corresponding to my share, and a list of strings for Firefly fields.
+    If no firefly fields found, print a warning.
     :param sw: A Splitwise object
     :param date: A datetime object, representing the date after which to get expenses
     :param user: A Splitwise User object for whom to get expenses
