@@ -4,7 +4,6 @@ from splitwise import Splitwise, Expense, User, Comment
 from splitwise.user import ExpenseUser
 from unittest.mock import MagicMock, patch
 
-# Import your functions here
 from main import (
     formatExpense, getSWUrlForExpense, getDate, getExpensesAfter,
     processText, callApi, searchTransactions, getTransactionsAfter,
@@ -116,7 +115,7 @@ def test_getTransactionsAfter(mock_searchTransactions):
 
 def test_getExpenseTransactionBody(mock_expense, mock_expense_user):
     result = getExpenseTransactionBody(mock_expense, mock_expense_user, ["Dest", "Category", "Desc"])
-    assert result["source_name"] == "Amex"  # Assuming this is your default
+    assert result["source_name"] == "Amex"
     assert result["destination_name"] == "Dest"
     assert result["category_name"] == "Category"
     assert result["amount"] == "10.00"
