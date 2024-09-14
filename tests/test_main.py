@@ -125,28 +125,27 @@ def test_getExpenseTransactionBody(mock_expense, mock_expense_user):
 @patch('main.updateTransaction')
 @patch('main.addTransaction')
 @patch('main.searchTransactions')
-def test_processExpense(mock_searchTransactions, mock_addTransaction, mock_updateTransaction, mock_callApi, mock_expense, mock_expense_user):
-    # Mock callApi to prevent actual API calls
+def test_processExpense_update(mock_searchTransactions, mock_addTransaction, mock_updateTransaction, mock_callApi, mock_expense, mock_expense_user):
     mock_callApi.return_value = MagicMock(json=lambda: {})
-
-    # Mock searchTransactions to return an empty list
     mock_searchTransactions.return_value = []
 
-    # Test updating an existing transaction
-    txns = {getSWUrlForExpense(mock_expense): {"id": "123", "attributes": {}}}
-    processExpense(datetime.now().astimezone() - timedelta(days=1), txns, mock_expense, mock_expense_user, [])
+    ff_txns = {getSWUrlForExpense(mock_expense): {"id": "123", "attributes": {}}}
+    processExpense(datetime.now().astimezone() - timedelta(days=1), ff_txns, mock_expense, mock_expense_user, [])
     mock_updateTransaction.assert_called_once()
     mock_addTransaction.assert_not_called()
     mock_searchTransactions.assert_not_called()
+    mock_searchTransactions.assert_called_once()
 
-    # Reset mocks
-    mock_updateTransaction.reset_mock()
-    mock_addTransaction.reset_mock()
-    mock_searchTransactions.reset_mock()
+@patch('main.callApi')
+@patch('main.updateTransaction')
+@patch('main.addTransaction')
+@patch('main.searchTransactions')
+def test_processExpense_add_new(mock_searchTransactions, mock_addTransaction, mock_updateTransaction, mock_callApi, mock_expense, mock_expense_user):
+    mock_callApi.return_value = MagicMock(json=lambda: {})
+    mock_searchTransactions.return_value = []
 
-    # Test adding a new transaction
-    txns = {}
-    processExpense(datetime.now().astimezone() - timedelta(days=1), txns, mock_expense, mock_expense_user, [])
+    ff_txns = {}
+    processExpense(datetime.now().astimezone() - timedelta(days=1), ff_txns, mock_expense, mock_expense_user, ["Dest", "Category", "Desc"])
     mock_addTransaction.assert_called_once()
     mock_updateTransaction.assert_not_called()
     mock_searchTransactions.assert_called_once()
