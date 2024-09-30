@@ -2,13 +2,35 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from splitwise import Splitwise, Expense, User, Comment
 from splitwise.user import ExpenseUser
-from typing import Generator
+from typing import Generator, TypedDict
 
 import os
 import requests
 
 time_now = datetime.now().astimezone()
 
+class Config(TypedDict):
+    FIREFLY_URL: str    
+    FIREFLY_TOKEN: str
+    FIREFLY_DRY_RUN: bool
+    FIREFLY_DEFAULT_CATEGORY: str
+    FIREFLY_DEFAULT_SPEND_ACCOUNT: str
+    FIREFLY_DEFAULT_TRXFR_ACCOUNT: str
+    SPLITWISE_TOKEN: str
+    SPLITWISE_DAYS: int
+
+def load_config() -> Config:
+    load_dotenv()
+    return {
+        "SPLITWISE_TOKEN": os.getenv("SPLITWISE_TOKEN"),
+        "FIREFLY_URL": os.getenv("FIREFLY_URL"),
+        "FIREFLY_TOKEN": os.getenv("FIREFLY_TOKEN"),
+        "FIREFLY_DEFAULT_CATEGORY": os.getenv("FIREFLY_DEFAULT_CATEGORY", "Uncategorized"),
+        "FIREFLY_DEFAULT_SPEND_ACCOUNT": os.getenv("FIREFLY_DEFAULT_SPEND_ACCOUNT"),
+        "FIREFLY_DEFAULT_TRXFR_ACCOUNT": os.getenv("FIREFLY_DEFAULT_TRXFR_ACCOUNT"),
+        "FIREFLY_DRY_RUN": bool(os.getenv("FIREFLY_DRY_RUN"), True),
+        "SPLITWISE_DAYS": int(os.getenv("SPLITWISE_DAYS", 1)),
+    },
 
 def formatExpense(exp: Expense, myshare: ExpenseUser) -> str:
     """
