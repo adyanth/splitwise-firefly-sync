@@ -26,9 +26,9 @@ def load_config() -> Config:
         "FIREFLY_DEFAULT_CATEGORY": os.getenv("FIREFLY_DEFAULT_CATEGORY", "Uncategorized"),
         "FIREFLY_DEFAULT_SPEND_ACCOUNT": os.getenv("FIREFLY_DEFAULT_SPEND_ACCOUNT", "Amex"),
         "FIREFLY_DEFAULT_TRXFR_ACCOUNT": os.getenv("FIREFLY_DEFAULT_TRXFR_ACCOUNT", "Chase Checking"),
-        "FIREFLY_DRY_RUN": bool(os.getenv("FIREFLY_DRY_RUN"), True),
+        "FIREFLY_DRY_RUN": bool(os.getenv("FIREFLY_DRY_RUN", True)),
         "SPLITWISE_DAYS": int(os.getenv("SPLITWISE_DAYS", 1)),
-    },
+    }
 
 time_now = datetime.now().astimezone()
 conf = load_config()
@@ -365,7 +365,6 @@ if __name__ == "__main__":
     """
     Main function. Get Splitwise expenses after a date and process them - update or add transactions on Firefly.
     """
-    load_dotenv()
     past_day = time_now - timedelta(days=conf["SPLITWISE_DAYS"])
 
     txns = getTransactionsAfter(past_day)
