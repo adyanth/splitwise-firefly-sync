@@ -2,13 +2,36 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from splitwise import Splitwise, Expense, User, Comment
 from splitwise.user import ExpenseUser
-from typing import Generator
+from typing import Generator, TypedDict
 
 import os
 import requests
 
-time_now = datetime.now().astimezone()
+class Config(TypedDict):
+    FIREFLY_URL: str    
+    FIREFLY_TOKEN: str
+    FIREFLY_DRY_RUN: bool
+    FIREFLY_DEFAULT_CATEGORY: str
+    FIREFLY_DEFAULT_SPEND_ACCOUNT: str
+    FIREFLY_DEFAULT_TRXFR_ACCOUNT: str
+    SPLITWISE_TOKEN: str
+    SPLITWISE_DAYS: int
 
+def load_config() -> Config:
+    load_dotenv()
+    return {
+        "SPLITWISE_TOKEN": os.getenv("SPLITWISE_TOKEN"),
+        "FIREFLY_URL": os.getenv("FIREFLY_URL", "http://firefly:8080"),
+        "FIREFLY_TOKEN": os.getenv("FIREFLY_TOKEN"),
+        "FIREFLY_DEFAULT_CATEGORY": os.getenv("FIREFLY_DEFAULT_CATEGORY", "Uncategorized"),
+        "FIREFLY_DEFAULT_SPEND_ACCOUNT": os.getenv("FIREFLY_DEFAULT_SPEND_ACCOUNT", "Amex"),
+        "FIREFLY_DEFAULT_TRXFR_ACCOUNT": os.getenv("FIREFLY_DEFAULT_TRXFR_ACCOUNT", "Chase Checking"),
+        "FIREFLY_DRY_RUN": bool(os.getenv("FIREFLY_DRY_RUN", True)),
+        "SPLITWISE_DAYS": int(os.getenv("SPLITWISE_DAYS", 1)),
+    }
+
+time_now = datetime.now().astimezone()
+conf = load_config()
 
 def formatExpense(exp: Expense, myshare: ExpenseUser) -> str:
     """
@@ -138,15 +161,15 @@ def callApi(path, method="POST", params={}, body={}, fail=True):
     :param fail: Whether to raise an exception on failure
     :return: The response object
     """
-    baseUrl = os.getenv("FIREFLY_URL", "http://firefly:8080")
-    token = os.getenv("FIREFLY_TOKEN")
+    baseUrl = conf["FIREFLY_URL"]
+    token = conf["FIREFLY_TOKEN"]
     headers = {
         "Authorization": f"Bearer {token}",
         # https://github.com/firefly-iii/firefly-iii/issues/6829
         "Accept": "application/json",
     }
 
-    if method != "GET" and os.getenv("FIREFLY_DRY_RUN"):
+    if method != "GET" and conf["FIREFLY_DRY_RUN"]:
         print(f"Skipping {method} call due to dry run.")
         res = requests.Response()
         res.status_code, res._content = 200, b"{}"
@@ -296,8 +319,7 @@ def getExpenseTransactionBody(exp: Expense, myshare: ExpenseUser, data: list[str
     if len(data) > 0 and data[0]:
         category = data[0]
     else:
-        category = os.getenv("FIREFLY_DEFAULT_CATEGORY",
-                             exp.getCategory().getName())
+        category = conf["FIREFLY_DEFAULT_CATEGORY"] or exp.getCategory().getName()
     data = data[1:]
 
     if len(data) > 0 and data[0]:
@@ -311,10 +333,9 @@ def getExpenseTransactionBody(exp: Expense, myshare: ExpenseUser, data: list[str
         source = data[0]
     else:
         if myshare.getPaidShare() != "0.0":
-            source = os.getenv("FIREFLY_DEFAULT_SPEND_ACCOUNT", "Amex")
+            source = conf["FIREFLY_DEFAULT_SPEND_ACCOUNT"]
         else:
-            source = os.getenv(
-                "FIREFLY_DEFAULT_TRXFR_ACCOUNT", "Chase Checking")
+            source = conf["FIREFLY_DEFAULT_TRXFR_ACCOUNT"]
     data = data[1:]
 
     notes = ""
@@ -344,12 +365,11 @@ if __name__ == "__main__":
     """
     Main function. Get Splitwise expenses after a date and process them - update or add transactions on Firefly.
     """
-    load_dotenv()
-    past_day = time_now - timedelta(days=int(os.getenv("SPLITWISE_DAYS", 1)))
+    past_day = time_now - timedelta(days=conf["SPLITWISE_DAYS"])
 
     txns = getTransactionsAfter(past_day)
 
-    sw = Splitwise("", "", api_key=os.getenv("SPLITWISE_TOKEN"))
+    sw = Splitwise("", "", api_key=conf["SPLITWISE_TOKEN"])
     currentUser = sw.getCurrentUser()
     print(f"User: {currentUser.getFirstName()}")
     print(f"From: {past_day}")
