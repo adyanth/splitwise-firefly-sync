@@ -360,6 +360,20 @@ def getExpenseTransactionBody(exp: Expense, myshare: ExpenseUser, data: list[str
         f"Processing {category} {formatExpense(exp, myshare)} from {source} to {dest}")
     return newTxn
 
+def getAccountCurrency(account_name: str) -> str:
+    # FIXME: could be a performance bottleneck, should split api call and search.
+    """Get the currency of an account on Firefly.
+
+    :param account: The account name
+    :return: The currency code
+    :raises: ValueError if the account is not found
+    """
+    ff_accounts = callApi("accounts/", method="GET", params={"type": "asset"}).json()
+    for acc in ff_accounts:
+        if acc["attributes"]["name"] == account_name:
+            return acc["attributes"]["currency_code"]
+    raise ValueError(f"Account {account_name} not found in asset accounts.")
+
 
 if __name__ == "__main__":
     """
