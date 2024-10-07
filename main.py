@@ -355,7 +355,7 @@ def getExpenseTransactionBody(exp: Expense, myshare: ExpenseUser, data: list[str
         "notes": notes,
         "external_url": getSWUrlForExpense(exp),
     }
-    if getAccountCurrency(source) != exp.getCurrencyCode():
+    if getAccountCurrencyCode(source) != exp.getCurrencyCode():
         newTxn["foreign_currency_code"] = exp.getCurrencyCode()
         newTxn["foreign_amount"] = myshare.getOwedShare()
         newTxn["amount"] = 0
@@ -364,7 +364,7 @@ def getExpenseTransactionBody(exp: Expense, myshare: ExpenseUser, data: list[str
         f"Processing {category} {formatExpense(exp, myshare)} from {source} to {dest}")
     return newTxn
 
-def getAccountCurrency(account_name: str) -> str:
+def getAccountCurrencyCode(account_name: str) -> str:
     # FIXME: could be a performance bottleneck, should split api call and search.
     """Get the currency of an account on Firefly.
 
