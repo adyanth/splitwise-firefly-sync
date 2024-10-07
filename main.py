@@ -359,7 +359,7 @@ def getExpenseTransactionBody(exp: Expense, myshare: ExpenseUser, data: list[str
     if getAccountCurrencyCode(source) != exp.getCurrencyCode():
         newTxn["foreign_currency_code"] = exp.getCurrencyCode()
         newTxn["foreign_amount"] = myshare.getOwedShare()
-        newTxn["amount"] = 0
+        newTxn["amount"] = 0.1
         newTxn["tags"] = [conf["FOREIGN_CURRENCY_TAG"]] 
     print(
         f"Processing {category} {formatExpense(exp, myshare)} from {source} to {dest}")
@@ -373,7 +373,7 @@ def getAccountCurrencyCode(account_name: str) -> str:
     :return: The currency code
     :raises: ValueError if the account is not found
     """
-    ff_accounts = callApi("accounts/", method="GET", params={"type": "asset"}).json()
+    ff_accounts = callApi("accounts/", method="GET", params={"type": "asset"}).json()['data']
     for acc in ff_accounts:
         if acc["attributes"]["name"] == account_name:
             return acc["attributes"]["currency_code"]
