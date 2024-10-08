@@ -28,7 +28,7 @@ def load_config() -> Config:
         "FIREFLY_DEFAULT_TRXFR_ACCOUNT": os.getenv("FIREFLY_DEFAULT_TRXFR_ACCOUNT", "Chase Checking"),
         "FIREFLY_DRY_RUN": bool(os.getenv("FIREFLY_DRY_RUN", True)),
         "SPLITWISE_DAYS": int(os.getenv("SPLITWISE_DAYS", 1)),
-        "FOREIGN_CURRENCY_TAG": os.getenv("FOREIGN_CURRENCY_TAG")
+        "FOREIGN_CURRENCY_TOFIX_TAG": os.getenv("FOREIGN_CURRENCY_TOFIX_TAG")
     }
 
 time_now = datetime.now().astimezone()
@@ -360,7 +360,7 @@ def getExpenseTransactionBody(exp: Expense, myshare: ExpenseUser, data: list[str
         newTxn["foreign_currency_code"] = exp.getCurrencyCode()
         newTxn["foreign_amount"] = myshare.getOwedShare()
         newTxn["amount"] = 0.1
-        newTxn["tags"] = [conf["FOREIGN_CURRENCY_TAG"]] 
+        newTxn["tags"] = [conf["FOREIGN_CURRENCY_TOFIX_TAG"]] 
     print(
         f"Processing {category} {formatExpense(exp, myshare)} from {source} to {dest}")
     return newTxn
