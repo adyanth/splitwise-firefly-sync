@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from splitwise import Splitwise, Expense, User, Comment
 from splitwise.user import ExpenseUser
 from typing import Generator, TypedDict
+from functools import wraps
 
 import os
 import requests
@@ -365,19 +366,35 @@ def getExpenseTransactionBody(exp: Expense, myshare: ExpenseUser, data: list[str
         f"Processing {category} {formatExpense(exp, myshare)} from {source} to {dest}")
     return newTxn
 
+def getAccounts(account_type: str="asset") -> list:
+    return callApi("accounts/", method="GET", params={"type": account_type}).json()['data']
+
+def cache_account_currency(function):
+    account_name_currency = dict(
+        map(
+            lambda x: (x["attributes"]["name"], x["attributes"]["currency_code"]),
+            getAccounts("asset"),
+        )
+    )
+
+    @wraps(function)
+    def cached(account_name: str) -> str:
+        try:
+            return account_name_currency[account_name]
+        except KeyError:
+            raise ValueError(f"Account {account_name} not found in asset accounts.")
+
+    return cached
+
+@cache_account_currency
 def getAccountCurrencyCode(account_name: str) -> str:
-    # FIXME: could be a performance bottleneck, should split api call and search.
     """Get the currency of an account on Firefly.
 
     :param account: The account name
     :return: The currency code
     :raises: ValueError if the account is not found
     """
-    ff_accounts = callApi("accounts/", method="GET", params={"type": "asset"}).json()['data']
-    for acc in ff_accounts:
-        if acc["attributes"]["name"] == account_name:
-            return acc["attributes"]["currency_code"]
-    raise ValueError(f"Account {account_name} not found in asset accounts.")
+    raise Exception("Will not be called")
 
 
 if __name__ == "__main__":
