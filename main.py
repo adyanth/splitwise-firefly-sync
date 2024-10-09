@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from splitwise import Splitwise, Expense, User, Comment
 from splitwise.user import ExpenseUser
 from typing import Generator, TypedDict
+from functools import wraps
 
 import os
 import requests
@@ -28,6 +29,7 @@ def load_config() -> Config:
         "FIREFLY_DEFAULT_TRXFR_ACCOUNT": os.getenv("FIREFLY_DEFAULT_TRXFR_ACCOUNT", "Chase Checking"),
         "FIREFLY_DRY_RUN": bool(os.getenv("FIREFLY_DRY_RUN", True)),
         "SPLITWISE_DAYS": int(os.getenv("SPLITWISE_DAYS", 1)),
+        "FOREIGN_CURRENCY_TOFIX_TAG": os.getenv("FOREIGN_CURRENCY_TOFIX_TAG")
     }
 
 time_now = datetime.now().astimezone()
@@ -348,7 +350,6 @@ def getExpenseTransactionBody(exp: Expense, myshare: ExpenseUser, data: list[str
         "category_name": category,
         "type": "withdrawal",
         "amount": myshare.getOwedShare(),
-        "currency_code": exp.getCurrencyCode(),
         "date": getDate(exp.getCreatedAt()).isoformat(),
         "payment_date": getDate(exp.getDate()).isoformat(),
         "description": description,
@@ -356,9 +357,44 @@ def getExpenseTransactionBody(exp: Expense, myshare: ExpenseUser, data: list[str
         "notes": notes,
         "external_url": getSWUrlForExpense(exp),
     }
+    if getAccountCurrencyCode(source) != exp.getCurrencyCode():
+        newTxn["foreign_currency_code"] = exp.getCurrencyCode()
+        newTxn["foreign_amount"] = myshare.getOwedShare()
+        newTxn["amount"] = 0.1
+        newTxn["tags"] = [conf["FOREIGN_CURRENCY_TOFIX_TAG"]] 
     print(
         f"Processing {category} {formatExpense(exp, myshare)} from {source} to {dest}")
     return newTxn
+
+def getAccounts(account_type: str="asset") -> list:
+    return callApi("accounts/", method="GET", params={"type": account_type}).json()['data']
+
+def cache_account_currency(function):
+    account_name_currency = dict(
+        map(
+            lambda x: (x["attributes"]["name"], x["attributes"]["currency_code"]),
+            getAccounts("asset"),
+        )
+    )
+
+    @wraps(function)
+    def cached(account_name: str) -> str:
+        try:
+            return account_name_currency[account_name]
+        except KeyError:
+            raise ValueError(f"Account {account_name} not found in asset accounts.")
+
+    return cached
+
+@cache_account_currency
+def getAccountCurrencyCode(account_name: str) -> str:
+    """Get the currency of an account on Firefly.
+
+    :param account: The account name
+    :return: The currency code
+    :raises: ValueError if the account is not found
+    """
+    raise Exception("Will not be called")
 
 
 if __name__ == "__main__":
