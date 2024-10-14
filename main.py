@@ -29,7 +29,9 @@ def load_config() -> Config:
         "FIREFLY_DEFAULT_TRXFR_ACCOUNT": os.getenv("FIREFLY_DEFAULT_TRXFR_ACCOUNT", "Chase Checking"),
         "FIREFLY_DRY_RUN": bool(os.getenv("FIREFLY_DRY_RUN", True)),
         "SPLITWISE_DAYS": int(os.getenv("SPLITWISE_DAYS", 1)),
-        "FOREIGN_CURRENCY_TOFIX_TAG": os.getenv("FOREIGN_CURRENCY_TOFIX_TAG")
+        "FOREIGN_CURRENCY_TOFIX_TAG": os.getenv("FOREIGN_CURRENCY_TOFIX_TAG"),
+        "SW_BALANCE_ACCOUNT": os.getenv("SW_BALANCE_ACCOUNT", False),
+        "SW_BALANCE_DEFAULT_DESCRIPTION": os.getenv("SW_BALANCE_DEFAULT_DESCRIPTION", "Splitwise balance"),
     }
 
 time_now = datetime.now().astimezone()
