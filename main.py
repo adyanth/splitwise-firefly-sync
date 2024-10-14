@@ -8,6 +8,10 @@ from functools import wraps
 import os
 import requests
 
+from strategies.standard import StandardTransactionStrategy
+from strategies.sw_balance import SWBalanceTransactionStrategy
+from strategies.base import TransactionStrategy
+
 class Config(TypedDict):
     FIREFLY_URL: str    
     FIREFLY_TOKEN: str
@@ -384,6 +388,12 @@ def applyExpenseAmountToTransaction(transaction: dict, exp: Expense, myshare: Ex
         transaction["amount"] = 0.1
         transaction["tags"].append(conf["FOREIGN_CURRENCY_TOFIX_TAG"])
     return transaction
+
+def get_transaction_strategy() -> TransactionStrategy:
+    if conf["SW_BALANCE_ACCOUNT"]:
+        return SWBalanceTransactionStrategy(getExpenseTransactionBody, conf["SW_BALANCE_ACCOUNT"])
+    else:
+        return StandardTransactionStrategy(getExpenseTransactionBody)
 
 def getAccounts(account_type: str="asset") -> list:
     """Get accounts from Firefly.
