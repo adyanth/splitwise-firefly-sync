@@ -294,24 +294,33 @@ def addTransaction(newTxn: dict) -> None:
 def processExpense(past_day: datetime, txns: dict[dict], exp: Expense, *args) -> None:
     """
     Process a Splitwise expense. Update or add a transaction on Firefly.
+
     :param past_day: A datetime object. Expenses before this date are ignored.
     :param txns: A dictionary of transactions indexed by Splitwise external URL.
     :param exp: A Splitwise Expense object.
     :param args: A list of strings for Firefly fields.
     :return: None
     """
-    newTxn: dict = getExpenseTransactionBody(exp, *args)
-    if oldTxnBody := txns.get(getSWUrlForExpense(exp)):
-        print("Updating...")
-        return updateTransaction(newTxn, oldTxnBody)
 
-    if getDate(exp.getCreatedAt()) < past_day or getDate(exp.getDate()) < past_day:
-        if search := searchTransactions({"query": f'external_url_is:"{getSWUrlForExpense(exp)}"'}):
-            print("Updating old...")
-            # TODO(#1): This would have 2 results for same splitwise expense
-            return updateTransaction(newTxn, search[0])
-    print("Adding...")
-    return addTransaction(newTxn)
+    strategy = get_transaction_strategy()
+    new_txns: list[dict] = strategy.create_transactions(exp, *args)
+    for idx, new_txn in enumerate(new_txns):
+        external_url = getSWUrlForExpense(exp)
+        if idx > 0:
+            external_url += f"-balance_transfer-{idx}"
+        new_txn["external_url"] = external_url
+        
+        if oldTxnBody := txns.get(external_url):
+            print(f"Updating transaction {idx + 1}...")
+            updateTransaction(new_txn, oldTxnBody)
+        elif getDate(exp.getCreatedAt()) < past_day or getDate(exp.getDate()) < past_day:
+            if search := searchTransactions({"query": f'external_url_is:"{external_url}"'}):
+                print(f"Updating old transaction {idx + 1}...")
+                # TODO(#1): This would have 2 results for same splitwise expense
+                updateTransaction(new_txn, search[0])
+        else:
+            print(f"Adding transaction {idx + 1}...")
+            addTransaction(new_txn)
 
 
 def getExpenseTransactionBody(exp: Expense, myshare: ExpenseUser, data: list[str], use_paid = False) -> dict:
