@@ -17,6 +17,9 @@ class Config(TypedDict):
     FIREFLY_DEFAULT_TRXFR_ACCOUNT: str
     SPLITWISE_TOKEN: str
     SPLITWISE_DAYS: int
+    # Debt tracker
+    SW_BALANCE_ACCOUNT: str
+    SW_BALANCE_DEFAULT_DESCRIPTION: str
 
 def load_config() -> Config:
     load_dotenv()
