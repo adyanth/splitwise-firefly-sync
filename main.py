@@ -314,7 +314,7 @@ def processExpense(past_day: datetime, txns: dict[dict], exp: Expense, *args) ->
     return addTransaction(newTxn)
 
 
-def getExpenseTransactionBody(exp: Expense, myshare: ExpenseUser, data: list[str]) -> dict:
+def getExpenseTransactionBody(exp: Expense, myshare: ExpenseUser, data: list[str], use_paid = False) -> dict:
     """
     Get the transaction body for a Splitwise expense.
     :param exp: A Splitwise Expense object
@@ -353,6 +353,7 @@ def getExpenseTransactionBody(exp: Expense, myshare: ExpenseUser, data: list[str
     if not processText(exp.getDetails()):
         notes = exp.getDetails()
 
+    amount = myshare.getPaidShare
     newTxn = {
         "source_name": source,
         "destination_name": dest,
