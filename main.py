@@ -367,6 +367,11 @@ def getExpenseTransactionBody(exp: Expense, myshare: ExpenseUser, data: list[str
     return newTxn
 
 def getAccounts(account_type: str="asset") -> list:
+    """Get accounts from Firefly.
+
+    :param account_type: The type of account
+    :return: A list of accounts
+    """
     return callApi("accounts/", method="GET", params={"type": account_type}).json()['data']
 
 def cache_account_currency(function):
