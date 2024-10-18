@@ -6,7 +6,7 @@ venv/
 __pycache__/
 .coverage
 coverage.xml
-htlmcov/
-junit/
+pytest.xml
+pytest-coverage.txt
 .ruff_cache
 .DS_Store
