@@ -1,17 +1,17 @@
 name: Python Test
 
 on:
-  workflow_dispatch:
-  push:
-    branches:
-      - 'main'
   pull_request:
     branches:
       - '*'
+permissions:
+  contents: write
+  checks: write
+  pull-requests: write
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -24,10 +24,17 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
       - name: Display Python version
-        run: python -c "import sys; print(sys.version)"
+        run: echo ${{ matrix.python-version }} && python -c "import sys; print(sys.version)"
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
       - name: Test
-        run: python -m pytest --junitxml=junit/test-results.xml --cov=main --cov-report=xml --cov-report=html
+        run: python -m pytest --junitxml=pytest.xml --cov=main --cov-report=xml:coverage.xml | tee pytest-coverage.txt
+      - name: Pytest coverage comment
+        uses: MishaKav/pytest-coverage-comment@main
+        if: ${{ matrix.python-version }} == "3.13"
+        with:
+          pytest-coverage-path: ./pytest-coverage.txt
+          pytest-xml-coverage-path: ./coverage.xml
+          junitxml-path: ./pytest.xml
