@@ -7,11 +7,8 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - '*'
+      - 'main'
     tags:
-      - '*'
-  pull_request:
-    branches:
       - '*'
 permissions: 
   contents: read
@@ -24,33 +21,32 @@ jobs:
     steps:
       # Get the repositery's code
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       
       # https://github.com/docker/setup-qemu-action
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v3
       # https://github.com/docker/setup-buildx-action
       - name: Set up Docker Buildx
         id: buildx
-        uses: docker/setup-buildx-action@v1
-
+        uses: docker/setup-buildx-action@v3
+      # https://github.com/docker/login-action
       - name: Login to DockerHub
-        uses: docker/login-action@v1
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
       - name: Login to GHCR
         if: github.event_name != 'pull_request'
-        uses: docker/login-action@v1
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
+      # https://github.com/docker/metadata-action
       - name: Docker meta
         id: meta
-        uses: docker/metadata-action@v3
+        uses: docker/metadata-action@v5
         with:
           # list of Docker images to use as base name for tags
           images: |
@@ -64,18 +60,18 @@ jobs:
             type=ref,event=tag
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha
-
+      # https://github.com/docker/build-push-action
       - name: Build and push
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v6
         with:
           context: .
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-
+      # https://github.com/peter-evans/dockerhub-description
       - name: Docker Hub Description
-        uses: peter-evans/dockerhub-description@v3
+        uses: peter-evans/dockerhub-description@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}

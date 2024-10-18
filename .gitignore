@@ -4,3 +4,9 @@ venv/
 .vscode/
 .pytest_cache/
 __pycache__/
+.coverage
+coverage.xml
+htlmcov/
+junit/
+.ruff_cache
+.DS_Store
