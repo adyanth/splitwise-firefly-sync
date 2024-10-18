@@ -1,6 +1,9 @@
 name: Python Test
 
 on:
+  push:
+    branches:
+      - 'main'
   pull_request:
     branches:
       - '*'
@@ -33,7 +36,7 @@ jobs:
         run: python -m pytest --junitxml=pytest.xml --cov=main --cov-report=xml:coverage.xml | tee pytest-coverage.txt
       - name: Pytest coverage comment
         uses: MishaKav/pytest-coverage-comment@main
-        if: ${{ matrix.python-version }} == "3.13"
+        if: github.event_name == 'pull_request' && ${{ matrix.python-version }} == "3.13"
         with:
           pytest-coverage-path: ./pytest-coverage.txt
           pytest-xml-coverage-path: ./coverage.xml
