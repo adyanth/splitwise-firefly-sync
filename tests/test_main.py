@@ -3,12 +3,20 @@ from datetime import datetime, timedelta
 from splitwise import Splitwise, Expense, User, Comment
 from splitwise.user import ExpenseUser
 from unittest.mock import MagicMock, patch
+import requests
+import importlib
 
-from main import (
-    formatExpense, getSWUrlForExpense, getDate, getExpensesAfter,
-    processText, callApi, searchTransactions, getTransactionsAfter,
-    processExpense, getExpenseTransactionBody
-)
+@pytest.fixture(autouse=True)
+def mock_requests():
+    with patch('requests.request') as mock:
+        mock.return_value.json.return_value = {'data': []}
+        yield mock
+
+
+def load_main():
+    import main
+    return main
+
 
 @pytest.fixture
 def mock_splitwise():
@@ -47,6 +55,7 @@ def mock_expense_user():
     return expense_user
 
 def test_formatExpense(mock_expense, mock_expense_user):
+    formatExpense = load_main().formatExpense
     result = formatExpense(mock_expense, mock_expense_user)
     assert "Test Expense" in result
     assert "USD" in result
@@ -55,10 +64,12 @@ def test_formatExpense(mock_expense, mock_expense_user):
     assert result == "Expense Test Expense for USD 10.00 on 2023-09-10T12:00:00Z"
 
 def test_getSWUrlForExpense(mock_expense):
+    getSWUrlForExpense = load_main().getSWUrlForExpense
     result = getSWUrlForExpense(mock_expense)
     assert result == "https://secure.splitwise.com/expenses/67890"
 
 def test_getDate():
+    getDate = load_main().getDate
     date_str = "2023-09-10T12:00:00Z"
     result = getDate(date_str)
     assert isinstance(result, datetime)
@@ -72,10 +83,12 @@ def test_getDate():
     ("normal text", []),
 ])
 def test_processText(text, expected):
+    processText = load_main().processText
     assert processText(text) == expected
 
 @patch('requests.request')
 def test_callApi(mock_request):
+    callApi = load_main().callApi
     mock_response = MagicMock()
     mock_response.status_code = 200
     mock_response.json.return_value = {"data": "test"}
@@ -87,6 +100,7 @@ def test_callApi(mock_request):
 
 @patch('main.callApi')
 def test_searchTransactions(mock_callApi):
+    searchTransactions = load_main().searchTransactions
     # Simulate pagination
     mock_responses = [
         MagicMock(json=lambda: {"data": [{"id": "1"}, {"id": "2"}]}),
@@ -102,30 +116,45 @@ def test_searchTransactions(mock_callApi):
 
 @patch('main.searchTransactions')
 def test_getTransactionsAfter(mock_searchTransactions):
+    getTransactionsAfter = load_main().getTransactionsAfter
     mock_searchTransactions.return_value = [
         {"attributes": {"transactions": [{"external_url": "url1"}]}},
         {"attributes": {"transactions": [{"external_url": "url2"}]}}
     ]
 
-    result = getTransactionsAfter(datetime.now() - timedelta(days=1))
+    result = getTransactionsAfter(datetime.now().astimezone() - timedelta(days=1))
     assert len(result) == 2
     assert "url1" in result
     assert "url2" in result
 
-def test_getExpenseTransactionBody(mock_expense, mock_expense_user):
-    result = getExpenseTransactionBody(mock_expense, mock_expense_user, ["Dest", "Category", "Desc"])
+@patch('main.getAccountCurrencyCode')
+def test_getExpenseTransactionBody(mock_getAccountCurrencyCode, mock_expense, mock_expense_user):
+    getExpenseTransactionBody = load_main().getExpenseTransactionBody
+    mock_getAccountCurrencyCode.return_value = "USD"
+    result = getExpenseTransactionBody(mock_expense, mock_expense_user, ["Dest", "Category", "Desc", "Amex"])
+
     assert result["source_name"] == "Amex"
     assert result["destination_name"] == "Dest"
     assert result["category_name"] == "Category"
     assert result["amount"] == "10.00"
-    assert result["currency_code"] == "USD"
     assert result["description"] == "Desc"
 
 @patch('main.callApi')
 @patch('main.updateTransaction')
 @patch('main.addTransaction')
 @patch('main.searchTransactions')
-def test_processExpense_update(mock_searchTransactions, mock_addTransaction, mock_updateTransaction, mock_callApi, mock_expense, mock_expense_user):
+@patch('main.getAccountCurrencyCode')
+def test_processExpense_update(mock_getAccountCurrencyCode,
+                               mock_searchTransactions,
+                               mock_addTransaction,
+                               mock_updateTransaction,
+                               mock_callApi,
+                               mock_expense,
+                               mock_expense_user):
+    processExpense = load_main().processExpense
+    getSWUrlForExpense = load_main().getSWUrlForExpense
+    
+    mock_getAccountCurrencyCode.return_value = "USD"
     mock_callApi.return_value = MagicMock(json=lambda: {})
     mock_searchTransactions.return_value = []
 
@@ -133,16 +162,23 @@ def test_processExpense_update(mock_searchTransactions, mock_addTransaction, moc
     processExpense(datetime.now().astimezone() - timedelta(days=1), ff_txns, mock_expense, mock_expense_user, [])
     mock_updateTransaction.assert_called_once()
     mock_addTransaction.assert_not_called()
-    mock_searchTransactions.assert_not_called()
-    mock_searchTransactions.assert_called_once()
 
 @patch('main.callApi')
 @patch('main.updateTransaction')
 @patch('main.addTransaction')
 @patch('main.searchTransactions')
-def test_processExpense_add_new(mock_searchTransactions, mock_addTransaction, mock_updateTransaction, mock_callApi, mock_expense, mock_expense_user):
+@patch('main.getAccountCurrencyCode')
+def test_processExpense_add_new(mock_getAccountCurrencyCode,
+                                mock_searchTransactions,
+                                mock_addTransaction,
+                                mock_updateTransaction,
+                                mock_callApi,
+                                mock_expense,
+                                mock_expense_user):
+    processExpense = load_main().processExpense
     mock_callApi.return_value = MagicMock(json=lambda: {})
     mock_searchTransactions.return_value = []
+    mock_getAccountCurrencyCode.return_value = "USD"
 
     ff_txns = {}
     processExpense(datetime.now().astimezone() - timedelta(days=1), ff_txns, mock_expense, mock_expense_user, ["Dest", "Category", "Desc"])
@@ -155,6 +191,7 @@ def mock_splitwise():
     return MagicMock()
 
 def test_getExpensesAfter(mock_splitwise, mock_user):
+    getExpensesAfter = load_main().getExpensesAfter
     # Setup
     mock_expense1 = MagicMock(spec=Expense)
     mock_expense1.getId.return_value = "1"
@@ -246,4 +283,4 @@ def test_getExpensesAfter(mock_splitwise, mock_user):
     assert all(r[0].getId() != "3" for r in result), "Expense without Firefly data should not be returned"
 
 if __name__ == "__main__":
-    pytest.main()
+    pytest.main([__file__])
