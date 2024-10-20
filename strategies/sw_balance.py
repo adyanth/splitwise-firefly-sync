@@ -12,7 +12,7 @@ class SWBalanceTransactionStrategy(TransactionStrategy):
 
         balance_txn = paid_txn.copy()
         balance = myshare.getNetBalance()
-        if balance > 0: # I payed something and people owe me money; extra money goes to balance account
+        if float(balance) > 0: # I payed something and people owe me money; extra money goes to balance account
             balance_txn['source_name'] = paid_txn['source_name']
             balance_txn['destination_name'] = self._sw_balance_account
             balance_txn['amount'] = balance
