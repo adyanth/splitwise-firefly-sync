@@ -168,7 +168,9 @@ def test_processExpense_update(mock_getAccountCurrencyCode,
 @patch('main.addTransaction')
 @patch('main.searchTransactions')
 @patch('main.getAccountCurrencyCode')
-def test_processExpense_add_new(mock_getAccountCurrencyCode,
+@patch('main.getDate')
+def test_processExpense_add_new(mock_getDate,
+                                mock_getAccountCurrencyCode,
                                 mock_searchTransactions,
                                 mock_addTransaction,
                                 mock_updateTransaction,
@@ -179,9 +181,11 @@ def test_processExpense_add_new(mock_getAccountCurrencyCode,
     mock_callApi.return_value = MagicMock(json=lambda: {})
     mock_searchTransactions.return_value = []
     mock_getAccountCurrencyCode.return_value = "USD"
+    mock_getDate.return_value = datetime.now().astimezone()
 
     ff_txns = {}
-    processExpense(datetime.now().astimezone() - timedelta(days=1), ff_txns, mock_expense, mock_expense_user, ["Dest", "Category", "Desc"])
+    with patch.dict('main.conf', {'SW_BALANCE_ACCOUNT': ''}):
+        processExpense(datetime.now().astimezone() - timedelta(days=1), ff_txns, mock_expense, mock_expense_user, ["Dest", "Category", "Desc"])
     mock_addTransaction.assert_called_once()
     mock_updateTransaction.assert_not_called()
     mock_searchTransactions.assert_called_once()
