@@ -362,7 +362,7 @@ def getExpenseTransactionBody(exp: Expense, myshare: ExpenseUser, data: list[str
     if not processText(exp.getDetails()):
         notes = exp.getDetails()
 
-    amount = myshare.getPaidShare if use_paid_amount else myshare.getOwedShare()
+    amount = myshare.getPaidShare() if use_paid_amount else myshare.getOwedShare()
     newTxn = {
         "source_name": source,
         "destination_name": dest,
