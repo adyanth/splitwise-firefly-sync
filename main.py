@@ -349,19 +349,15 @@ def getExpenseTransactionBody(exp: Expense, myshare: ExpenseUser, data: list[str
         "destination_name": dest,
         "category_name": category,
         "type": "withdrawal",
-        "amount": myshare.getOwedShare(),
         "date": getDate(exp.getCreatedAt()).isoformat(),
         "payment_date": getDate(exp.getDate()).isoformat(),
         "description": description,
         "reconciled": False,
         "notes": notes,
         "external_url": getSWUrlForExpense(exp),
+        "tags": [],
     }
-    if getAccountCurrencyCode(source) != exp.getCurrencyCode():
-        newTxn["foreign_currency_code"] = exp.getCurrencyCode()
-        newTxn["foreign_amount"] = myshare.getOwedShare()
-        newTxn["amount"] = 0.1
-        newTxn["tags"] = [conf["FOREIGN_CURRENCY_TOFIX_TAG"]] 
+    newTxn = applyExpenseAmountToTransaction(newTxn, exp, myshare)
     print(
         f"Processing {category} {formatExpense(exp, myshare)} from {source} to {dest}")
     return newTxn
