@@ -168,8 +168,7 @@ def test_processExpense_update(mock_getAccountCurrencyCode,
 @patch('main.addTransaction')
 @patch('main.searchTransactions')
 @patch('main.getAccountCurrencyCode')
-@patch('main.getDate')
-def test_processExpense_add_new(mock_getDate,
+def test_processExpense_add_new(
                                 mock_getAccountCurrencyCode,
                                 mock_searchTransactions,
                                 mock_addTransaction,
@@ -181,7 +180,6 @@ def test_processExpense_add_new(mock_getDate,
     mock_callApi.return_value = MagicMock(json=lambda: {})
     mock_searchTransactions.return_value = []
     mock_getAccountCurrencyCode.return_value = "USD"
-    mock_getDate.return_value = datetime.now().astimezone()
 
     ff_txns = {}
     with patch.dict('main.conf', {'SW_BALANCE_ACCOUNT': ''}):
