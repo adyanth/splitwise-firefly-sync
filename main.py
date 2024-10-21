@@ -312,14 +312,15 @@ def processExpense(past_day: datetime, txns: dict[dict], exp: Expense, *args) ->
         if oldTxnBody := txns.get(external_url):
             print(f"Updating transaction {idx + 1}...")
             updateTransaction(new_txn, oldTxnBody)
-        elif getDate(exp.getCreatedAt()) < past_day or getDate(exp.getDate()) < past_day:
+            continue
+        if getDate(exp.getCreatedAt()) < past_day or getDate(exp.getDate()) < past_day:
             if search := searchTransactions({"query": f'external_url_is:"{external_url}"'}):
                 print(f"Updating old transaction {idx + 1}...")
                 # TODO(#1): This would have 2 results for same splitwise expense
                 updateTransaction(new_txn, search[0])
-        else:
-            print(f"Adding transaction {idx + 1}...")
-            addTransaction(new_txn)
+                continue
+        print(f"Adding transaction {idx + 1}...")
+        addTransaction(new_txn)
 
 
 def getExpenseTransactionBody(exp: Expense, myshare: ExpenseUser, data: list[str], use_paid_amount = False) -> dict:
