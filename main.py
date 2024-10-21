@@ -366,6 +366,24 @@ def getExpenseTransactionBody(exp: Expense, myshare: ExpenseUser, data: list[str
         f"Processing {category} {formatExpense(exp, myshare)} from {source} to {dest}")
     return newTxn
 
+def applyExpenseAmountToTransaction(transaction: dict, exp: Expense, myshare: ExpenseUser) -> dict:
+    """Apply the amount to the transaction based on the currency of the account.
+    
+    :param transaction: The transaction dictionary
+    :param exp: The Splitwise expense
+    :param myshare: The user's share in the expense
+    :return: The updated transaction dictionary
+    """
+    amount = myshare.getOwedShare()
+    if getAccountCurrencyCode(transaction["source_name"]) == exp.getCurrencyCode():
+        transaction["amount"] = amount
+    else:
+        transaction["foreign_currency_code"] = exp.getCurrencyCode()
+        transaction["foreign_amount"] = amount
+        transaction["amount"] = 0.1
+        transaction["tags"].append(conf["FOREIGN_CURRENCY_TOFIX_TAG"])
+
+
 def getAccounts(account_type: str="asset") -> list:
     """Get accounts from Firefly.
 
