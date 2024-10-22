@@ -349,22 +349,36 @@ def getExpenseTransactionBody(exp: Expense, myshare: ExpenseUser, data: list[str
         "destination_name": dest,
         "category_name": category,
         "type": "withdrawal",
-        "amount": myshare.getOwedShare(),
         "date": getDate(exp.getCreatedAt()).isoformat(),
         "payment_date": getDate(exp.getDate()).isoformat(),
         "description": description,
         "reconciled": False,
         "notes": notes,
         "external_url": getSWUrlForExpense(exp),
+        "tags": [],
     }
-    if getAccountCurrencyCode(source) != exp.getCurrencyCode():
-        newTxn["foreign_currency_code"] = exp.getCurrencyCode()
-        newTxn["foreign_amount"] = myshare.getOwedShare()
-        newTxn["amount"] = 0.1
-        newTxn["tags"] = [conf["FOREIGN_CURRENCY_TOFIX_TAG"]] 
+    newTxn = applyExpenseAmountToTransaction(newTxn, exp, myshare)
     print(
         f"Processing {category} {formatExpense(exp, myshare)} from {source} to {dest}")
     return newTxn
+
+def applyExpenseAmountToTransaction(transaction: dict, exp: Expense, myshare: ExpenseUser) -> dict:
+    """Apply the amount to the transaction based on the currency of the account.
+    
+    :param transaction: The transaction dictionary
+    :param exp: The Splitwise expense
+    :param myshare: The user's share in the expense
+    :return: The updated transaction dictionary
+    """
+    amount = myshare.getOwedShare()
+    if getAccountCurrencyCode(transaction["source_name"]) == exp.getCurrencyCode():
+        transaction["amount"] = amount
+    else:
+        transaction["foreign_currency_code"] = exp.getCurrencyCode()
+        transaction["foreign_amount"] = amount
+        transaction["amount"] = 0.1
+        transaction["tags"].append(conf["FOREIGN_CURRENCY_TOFIX_TAG"])
+
 
 def getAccounts(account_type: str="asset") -> list:
     """Get accounts from Firefly.
