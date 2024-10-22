@@ -378,7 +378,7 @@ def applyExpenseAmountToTransaction(transaction: dict, exp: Expense, myshare: Ex
         transaction["foreign_amount"] = amount
         transaction["amount"] = 0.1
         transaction["tags"].append(conf["FOREIGN_CURRENCY_TOFIX_TAG"])
-
+    return transaction
 
 def getAccounts(account_type: str="asset") -> list:
     """Get accounts from Firefly.
