@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from splitwise import Splitwise, Expense, User, Comment
 from splitwise.user import ExpenseUser
-from typing import Generator, TypedDict
+from typing import Generator, TypedDict, Union
 from functools import wraps
 
 import os
@@ -323,7 +323,7 @@ def processExpense(past_day: datetime, txns: dict[dict], exp: Expense, *args) ->
         addTransaction(new_txn)
 
 
-def getExpenseTransactionBody(exp: Expense, myshare: ExpenseUser, data: list[str], use_paid_amount = False) -> dict:
+def getExpenseTransactionBody(exp: Expense, myshare: ExpenseUser, data: list[str]) -> dict:
     """
     Get the transaction body for a Splitwise expense.
     :param exp: A Splitwise Expense object
@@ -362,7 +362,6 @@ def getExpenseTransactionBody(exp: Expense, myshare: ExpenseUser, data: list[str
     if not processText(exp.getDetails()):
         notes = exp.getDetails()
 
-    amount = myshare.getPaidShare() if use_paid_amount else myshare.getOwedShare()
     newTxn = {
         "source_name": source,
         "destination_name": dest,
@@ -381,15 +380,19 @@ def getExpenseTransactionBody(exp: Expense, myshare: ExpenseUser, data: list[str
         f"Processing {category} {formatExpense(exp, myshare)} from {source} to {dest}")
     return newTxn
 
-def applyExpenseAmountToTransaction(transaction: dict, exp: Expense, myshare: ExpenseUser) -> dict:
+def applyExpenseAmountToTransaction(transaction: dict, exp: Expense, myshare: Union[ExpenseUser, float, str]) -> dict:
     """Apply the amount to the transaction based on the currency of the account.
     
     :param transaction: The transaction dictionary
     :param exp: The Splitwise expense
-    :param myshare: The user's share in the expense
+    :param myshare: The user's share in the expense. If a float, it is the transaction amount.
     :return: The updated transaction dictionary
     """
-    amount = myshare.getOwedShare()
+    if isinstance(myshare, ExpenseUser):
+        amount = myshare.getOwedShare()
+    else:
+        amount = str(myshare)
+
     if getAccountCurrencyCode(transaction["source_name"]) == exp.getCurrencyCode():
         transaction["amount"] = amount
     else:
