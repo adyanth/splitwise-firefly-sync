@@ -404,7 +404,7 @@ def applyExpenseAmountToTransaction(transaction: dict, exp: Expense, myshare: Un
 
 def get_transaction_strategy() -> TransactionStrategy:
     if conf["SW_BALANCE_ACCOUNT"]:
-        return SWBalanceTransactionStrategy(getExpenseTransactionBody, conf["SW_BALANCE_ACCOUNT"])
+        return SWBalanceTransactionStrategy(getExpenseTransactionBody, conf["SW_BALANCE_ACCOUNT"], applyExpenseAmountToTransaction)
     else:
         return StandardTransactionStrategy(getExpenseTransactionBody)
 
