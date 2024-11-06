@@ -393,7 +393,13 @@ def applyExpenseAmountToTransaction(transaction: dict, exp: Expense, myshare: Un
     else:
         amount = str(myshare)
 
-    if getAccountCurrencyCode(transaction["source_name"]) == exp.getCurrencyCode():
+    if transaction['type'] in ["withdrawal", "transfer"]:
+        determiner_account = transaction['source_name']
+    elif transaction['type'] == "deposit":
+        determiner_account = transaction['destination_name']
+    else:
+        raise NotImplementedError(f"Transaction type {transaction['type']} not implemented.")
+    if getAccountCurrencyCode(determiner_account) == exp.getCurrencyCode():
         transaction["amount"] = amount
     else:
         transaction["foreign_currency_code"] = exp.getCurrencyCode()
