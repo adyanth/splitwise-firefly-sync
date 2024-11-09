@@ -26,5 +26,7 @@ class SWBalanceTransactionStrategy(TransactionStrategy):
             balance_txn['type'] = "withdrawal"
             balance_txn['description'] = f"Balance transfer for: {paid_txn['description']}"
             balance_txn = self._apply_transaction_amount(balance_txn, exp, -float(balance))
-        
-        return [paid_txn, balance_txn]
+        txns = [paid_txn, balance_txn]
+        if float(paid_txn['amount']) == 0: # I payed nothing; only balance transaction is needed
+            txns = [balance_txn]
+        return txns
