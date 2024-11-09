@@ -24,7 +24,7 @@ def load_config() -> Config:
         "SPLITWISE_TOKEN": os.getenv("SPLITWISE_TOKEN"),
         "FIREFLY_URL": os.getenv("FIREFLY_URL", "http://firefly:8080"),
         "FIREFLY_TOKEN": os.getenv("FIREFLY_TOKEN"),
-        "FIREFLY_DEFAULT_CATEGORY": os.getenv("FIREFLY_DEFAULT_CATEGORY", "Uncategorized"),
+        "FIREFLY_DEFAULT_CATEGORY": os.getenv("FIREFLY_DEFAULT_CATEGORY"),
         "FIREFLY_DEFAULT_SPEND_ACCOUNT": os.getenv("FIREFLY_DEFAULT_SPEND_ACCOUNT", "Amex"),
         "FIREFLY_DEFAULT_TRXFR_ACCOUNT": os.getenv("FIREFLY_DEFAULT_TRXFR_ACCOUNT", "Chase Checking"),
         "FIREFLY_DRY_RUN": bool(os.getenv("FIREFLY_DRY_RUN", True)),
