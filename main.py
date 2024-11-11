@@ -375,31 +375,28 @@ def getExpenseTransactionBody(exp: Expense, myshare: ExpenseUser, data: list[str
         "external_url": getSWUrlForExpense(exp),
         "tags": [],
     }
-    newTxn = applyExpenseAmountToTransaction(newTxn, exp, myshare)
+    newTxn = applyAmountToTransaction(newTxn, exp, myshare.getOwedShare())
     print(
         f"Processing {category} {formatExpense(exp, myshare)} from {source} to {dest}")
     return newTxn
 
-def applyExpenseAmountToTransaction(transaction: dict, exp: Expense, myshare: Union[ExpenseUser, float, str]) -> dict:
+def applyAmountToTransaction(transaction: dict, exp: Expense, amount: float) -> dict:
     """Apply the amount to the transaction based on the currency of the account.
     
     :param transaction: The transaction dictionary
     :param exp: The Splitwise expense
-    :param myshare: The user's share in the expense. If a float, it is the transaction amount.
+    :param amount: The amount to apply
     :return: The updated transaction dictionary
     """
-    if isinstance(myshare, ExpenseUser):
-        amount = myshare.getOwedShare()
-    else:
-        amount = str(myshare)
+    amount = str(float(amount))
 
     if transaction['type'] in ["withdrawal", "transfer"]:
-        determiner_account = transaction['source_name']
+        account_to_check = transaction['source_name']
     elif transaction['type'] == "deposit":
-        determiner_account = transaction['destination_name']
+        account_to_check = transaction['destination_name']
     else:
         raise NotImplementedError(f"Transaction type {transaction['type']} not implemented.")
-    if getAccountCurrencyCode(determiner_account) == exp.getCurrencyCode():
+    if getAccountCurrencyCode(account_to_check) == exp.getCurrencyCode():
         transaction["amount"] = amount
     else:
         transaction["foreign_currency_code"] = exp.getCurrencyCode()
@@ -410,7 +407,7 @@ def applyExpenseAmountToTransaction(transaction: dict, exp: Expense, myshare: Un
 
 def get_transaction_strategy() -> TransactionStrategy:
     if conf["SW_BALANCE_ACCOUNT"]:
-        return SWBalanceTransactionStrategy(getExpenseTransactionBody, conf["SW_BALANCE_ACCOUNT"], applyExpenseAmountToTransaction)
+        return SWBalanceTransactionStrategy(getExpenseTransactionBody, conf["SW_BALANCE_ACCOUNT"], applyAmountToTransaction)
     else:
         return StandardTransactionStrategy(getExpenseTransactionBody)
 
