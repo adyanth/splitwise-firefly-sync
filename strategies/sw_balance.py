@@ -16,10 +16,10 @@ class SWBalanceTransactionStrategy(TransactionStrategy):
             txns['paid'] = paid_txn
 
         balance_txn = paid_txn.copy()
-        balance = myshare.getNetBalance()
-        if float(balance) != 0: # I owe or am owed; balance txn needed
+        balance = float(myshare.getNetBalance())
+        if balance != 0: # I owe or am owed; balance txn needed
             txns['balance'] = balance_txn
-            if float(balance) > 0: # I am owed; difference credited to balance account
+            if balance > 0: # I am owed; difference credited to balance account
                 balance_txn['source_name'] = self._sw_balance_account + " balancer"
                 balance_txn['destination_name'] = self._sw_balance_account
                 balance_txn['type'] = 'deposit'
@@ -30,5 +30,5 @@ class SWBalanceTransactionStrategy(TransactionStrategy):
                 balance_txn['destination_name'] = paid_txn['destination_name']
                 balance_txn['type'] = "withdrawal"
                 balance_txn['description'] = f"Balance transfer for: {paid_txn['description']}"
-                balance_txn = self._apply_transaction_amount(balance_txn, exp, -float(balance))
+                balance_txn = self._apply_transaction_amount(balance_txn, exp, -balance)
         return list(txns.values())
