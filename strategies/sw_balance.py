@@ -31,4 +31,4 @@ class SWBalanceTransactionStrategy(TransactionStrategy):
                 balance_txn['type'] = "withdrawal"
                 balance_txn['description'] = f"Balance transfer for: {paid_txn['description']}"
                 balance_txn = self._apply_transaction_amount(balance_txn, exp, -float(balance))
-        return txns
+        return list(txns.values())
