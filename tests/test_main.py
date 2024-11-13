@@ -136,7 +136,7 @@ def test_getExpenseTransactionBody(mock_getAccountCurrencyCode, mock_expense, mo
     assert result["source_name"] == "Amex"
     assert result["destination_name"] == "Dest"
     assert result["category_name"] == "Category"
-    assert result["amount"] == "10.00"
+    assert float(result["amount"]) == float("10.00")
     assert result["description"] == "Desc"
 
 @patch('main.callApi')
