@@ -21,8 +21,8 @@ mock_user.getPaidShare.return_value = "110.00"
 mock_user.getNetBalance.return_value = "50.00"
 
 # Mock getExpenseTransactionBody function
-def mock_get_expense_transaction_body(exp, myshare, data, use_paid_amount=False):
-    amount = myshare.getPaidShare() if use_paid_amount else myshare.getOwedShare()
+def mock_get_expense_transaction_body(exp, myshare, data):
+    amount = myshare.getOwedShare()
     return {
         "amount": amount,
         "description": exp.getDescription(),
@@ -32,6 +32,10 @@ def mock_get_expense_transaction_body(exp, myshare, data, use_paid_amount=False)
         "category_name": "Test Category",
         "type": "withdrawal",
     }
+
+def mock_apply_transaction_amount(txn, exp, amount):
+    txn['amount'] = str(amount)
+    return txn
 
 # Tests for StandardTransactionStrategy
 def test_standard_strategy():
@@ -44,14 +48,14 @@ def test_standard_strategy():
 
 # Tests for SWBalanceTransactionStrategy
 def test_sw_balance_strategy():
-    strategy = SWBalanceTransactionStrategy(mock_get_expense_transaction_body, "Splitwise Balance")
+    strategy = SWBalanceTransactionStrategy(mock_get_expense_transaction_body, "Splitwise Balance", mock_apply_transaction_amount)
     transactions = strategy.create_transactions(mock_expense, mock_user, [])
     
     assert len(transactions) == 2
     assert transactions[0]["amount"] == "110.00"
     assert transactions[0]["description"] == "Test Expense"
-    assert transactions[1]["amount"] == "50.00"
-    assert transactions[1]["type"] == "transfer"
+    assert float(transactions[1]["amount"]) == float("50.00")
+    assert transactions[1]["type"] == "deposit"
     assert transactions[1]["destination_name"] == "Splitwise Balance"
 
 # Test for processExpense function
