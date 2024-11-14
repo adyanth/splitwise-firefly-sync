@@ -136,7 +136,7 @@ def test_getExpenseTransactionBody(mock_getAccountCurrencyCode, mock_expense, mo
     assert result["source_name"] == "Amex"
     assert result["destination_name"] == "Dest"
     assert result["category_name"] == "Category"
-    assert result["amount"] == "10.00"
+    assert float(result["amount"]) == float("10.00")
     assert result["description"] == "Desc"
 
 @patch('main.callApi')
@@ -151,24 +151,27 @@ def test_processExpense_update(mock_getAccountCurrencyCode,
                                mock_callApi,
                                mock_expense,
                                mock_expense_user):
-    processExpense = load_main().processExpense
-    getSWUrlForExpense = load_main().getSWUrlForExpense
-    
-    mock_getAccountCurrencyCode.return_value = "USD"
-    mock_callApi.return_value = MagicMock(json=lambda: {})
-    mock_searchTransactions.return_value = []
+    from main import Config
+    with patch.dict('main.conf', {'SW_BALANCE_ACCOUNT': ''}):
+        processExpense = load_main().processExpense
+        getSWUrlForExpense = load_main().getSWUrlForExpense
+        
+        mock_getAccountCurrencyCode.return_value = "USD"
+        mock_callApi.return_value = MagicMock(json=lambda: {})
+        mock_searchTransactions.return_value = []
 
-    ff_txns = {getSWUrlForExpense(mock_expense): {"id": "123", "attributes": {}}}
-    processExpense(datetime.now().astimezone() - timedelta(days=1), ff_txns, mock_expense, mock_expense_user, [])
-    mock_updateTransaction.assert_called_once()
-    mock_addTransaction.assert_not_called()
+        ff_txns = {getSWUrlForExpense(mock_expense): {"id": "123", "attributes": {}}}
+        processExpense(datetime.now().astimezone() - timedelta(days=1), ff_txns, mock_expense, mock_expense_user, [])
+        mock_updateTransaction.assert_called_once()
+        mock_addTransaction.assert_not_called()
 
 @patch('main.callApi')
 @patch('main.updateTransaction')
 @patch('main.addTransaction')
 @patch('main.searchTransactions')
 @patch('main.getAccountCurrencyCode')
-def test_processExpense_add_new(mock_getAccountCurrencyCode,
+def test_processExpense_add_new(
+                                mock_getAccountCurrencyCode,
                                 mock_searchTransactions,
                                 mock_addTransaction,
                                 mock_updateTransaction,
@@ -181,7 +184,8 @@ def test_processExpense_add_new(mock_getAccountCurrencyCode,
     mock_getAccountCurrencyCode.return_value = "USD"
 
     ff_txns = {}
-    processExpense(datetime.now().astimezone() - timedelta(days=1), ff_txns, mock_expense, mock_expense_user, ["Dest", "Category", "Desc"])
+    with patch.dict('main.conf', {'SW_BALANCE_ACCOUNT': ''}):
+        processExpense(datetime.now().astimezone() - timedelta(days=1), ff_txns, mock_expense, mock_expense_user, ["Dest", "Category", "Desc"])
     mock_addTransaction.assert_called_once()
     mock_updateTransaction.assert_not_called()
     mock_searchTransactions.assert_called_once()

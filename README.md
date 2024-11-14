@@ -16,6 +16,16 @@ Set these variables either in the environment or a `.env` file along with the sc
 6. `FIREFLY_DEFAULT_CATEGORY`: Set the default category to use. If empty, falls back to the Splitwise category.
 7. `FIREFLY_DRY_RUN`: Set this to any value to dry run and skip the firefly API call.
 8. `SPLITWISE_DAYS=1`
+9. `SW_BALANCE_ACCOUNT=Splitwise balance`: Set this to the name of the virtual Splitwise balance asset account on Firefly to enable the debt tracking feature.
+
+## Debt tracking feature
+When enabled, tracks Splitwise payable and receivable debts in an account defined by `SW_BALANCE_ACCOUNT`.
+
+For example, assume you paid 100$ but your share was only 40$. Splitwise records correctly that you are owed 60$ - so your total assets haven't really decreased by 100$, only by 40$. Enabling this feature correctly tracks this in Firefly, without compromising on recording the real 100$ transaction you will see in your bank statement.
+
+For each Splitwise expense, create two Firefly transactions: 
+1. A withdrawal from a real account, recording the real amount of money paid in the expense
+2. A deposit to the `SW_BALANCE_ACCOUNT` equal the difference between the amount paid and the amount owed.
 
 ## Note/Comment format
 

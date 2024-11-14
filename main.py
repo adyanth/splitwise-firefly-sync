@@ -2,11 +2,15 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from splitwise import Splitwise, Expense, User, Comment
 from splitwise.user import ExpenseUser
-from typing import Generator, TypedDict
+from typing import Generator, TypedDict, Union
 from functools import wraps
 
 import os
 import requests
+
+from strategies.standard import StandardTransactionStrategy
+from strategies.sw_balance import SWBalanceTransactionStrategy
+from strategies.base import TransactionStrategy
 
 class Config(TypedDict):
     FIREFLY_URL: str    
@@ -17,6 +21,8 @@ class Config(TypedDict):
     FIREFLY_DEFAULT_TRXFR_ACCOUNT: str
     SPLITWISE_TOKEN: str
     SPLITWISE_DAYS: int
+    # Debt tracker
+    SW_BALANCE_ACCOUNT: str
 
 def load_config() -> Config:
     load_dotenv()
@@ -29,7 +35,9 @@ def load_config() -> Config:
         "FIREFLY_DEFAULT_TRXFR_ACCOUNT": os.getenv("FIREFLY_DEFAULT_TRXFR_ACCOUNT", "Chase Checking"),
         "FIREFLY_DRY_RUN": bool(os.getenv("FIREFLY_DRY_RUN", True)),
         "SPLITWISE_DAYS": int(os.getenv("SPLITWISE_DAYS", 1)),
-        "FOREIGN_CURRENCY_TOFIX_TAG": os.getenv("FOREIGN_CURRENCY_TOFIX_TAG")
+        "FOREIGN_CURRENCY_TOFIX_TAG": os.getenv("FOREIGN_CURRENCY_TOFIX_TAG"),
+        "SW_BALANCE_ACCOUNT": os.getenv("SW_BALANCE_ACCOUNT", False),
+        "SW_BALANCE_DEFAULT_DESCRIPTION": os.getenv("SW_BALANCE_DEFAULT_DESCRIPTION", "Splitwise balance"),
     }
 
 time_now = datetime.now().astimezone()
@@ -285,24 +293,34 @@ def addTransaction(newTxn: dict) -> None:
 def processExpense(past_day: datetime, txns: dict[dict], exp: Expense, *args) -> None:
     """
     Process a Splitwise expense. Update or add a transaction on Firefly.
+
     :param past_day: A datetime object. Expenses before this date are ignored.
     :param txns: A dictionary of transactions indexed by Splitwise external URL.
     :param exp: A Splitwise Expense object.
     :param args: A list of strings for Firefly fields.
     :return: None
     """
-    newTxn: dict = getExpenseTransactionBody(exp, *args)
-    if oldTxnBody := txns.get(getSWUrlForExpense(exp)):
-        print("Updating...")
-        return updateTransaction(newTxn, oldTxnBody)
 
-    if getDate(exp.getCreatedAt()) < past_day or getDate(exp.getDate()) < past_day:
-        if search := searchTransactions({"query": f'external_url_is:"{getSWUrlForExpense(exp)}"'}):
-            print("Updating old...")
-            # TODO(#1): This would have 2 results for same splitwise expense
-            return updateTransaction(newTxn, search[0])
-    print("Adding...")
-    return addTransaction(newTxn)
+    strategy = get_transaction_strategy()
+    new_txns: list[dict] = strategy.create_transactions(exp, *args)
+    for idx, new_txn in enumerate(new_txns):
+        external_url = getSWUrlForExpense(exp)
+        if idx > 0:
+            external_url += f"-balance_transfer-{idx}"
+        new_txn["external_url"] = external_url
+        
+        if oldTxnBody := txns.get(external_url):
+            print(f"Updating transaction {idx + 1}...")
+            updateTransaction(new_txn, oldTxnBody)
+            continue
+        if getDate(exp.getCreatedAt()) < past_day or getDate(exp.getDate()) < past_day:
+            if search := searchTransactions({"query": f'external_url_is:"{external_url}"'}):
+                print(f"Updating old transaction {idx + 1}...")
+                # TODO(#1): This would have 2 results for same splitwise expense
+                updateTransaction(new_txn, search[0])
+                continue
+        print(f"Adding transaction {idx + 1}...")
+        addTransaction(new_txn)
 
 
 def getExpenseTransactionBody(exp: Expense, myshare: ExpenseUser, data: list[str]) -> dict:
@@ -357,21 +375,28 @@ def getExpenseTransactionBody(exp: Expense, myshare: ExpenseUser, data: list[str
         "external_url": getSWUrlForExpense(exp),
         "tags": [],
     }
-    newTxn = applyExpenseAmountToTransaction(newTxn, exp, myshare)
+    newTxn = applyAmountToTransaction(newTxn, exp, myshare.getOwedShare())
     print(
         f"Processing {category} {formatExpense(exp, myshare)} from {source} to {dest}")
     return newTxn
 
-def applyExpenseAmountToTransaction(transaction: dict, exp: Expense, myshare: ExpenseUser) -> dict:
+def applyAmountToTransaction(transaction: dict, exp: Expense, amount: float) -> dict:
     """Apply the amount to the transaction based on the currency of the account.
     
     :param transaction: The transaction dictionary
     :param exp: The Splitwise expense
-    :param myshare: The user's share in the expense
+    :param amount: The amount to apply
     :return: The updated transaction dictionary
     """
-    amount = myshare.getOwedShare()
-    if getAccountCurrencyCode(transaction["source_name"]) == exp.getCurrencyCode():
+    amount = str(float(amount))
+
+    if transaction['type'] in ["withdrawal", "transfer"]:
+        account_to_check = transaction['source_name']
+    elif transaction['type'] == "deposit":
+        account_to_check = transaction['destination_name']
+    else:
+        raise NotImplementedError(f"Transaction type {transaction['type']} not implemented.")
+    if getAccountCurrencyCode(account_to_check) == exp.getCurrencyCode():
         transaction["amount"] = amount
     else:
         transaction["foreign_currency_code"] = exp.getCurrencyCode()
@@ -379,6 +404,12 @@ def applyExpenseAmountToTransaction(transaction: dict, exp: Expense, myshare: Ex
         transaction["amount"] = 0.1
         transaction["tags"].append(conf["FOREIGN_CURRENCY_TOFIX_TAG"])
     return transaction
+
+def get_transaction_strategy() -> TransactionStrategy:
+    if conf["SW_BALANCE_ACCOUNT"]:
+        return SWBalanceTransactionStrategy(getExpenseTransactionBody, conf["SW_BALANCE_ACCOUNT"], applyAmountToTransaction)
+    else:
+        return StandardTransactionStrategy(getExpenseTransactionBody)
 
 def getAccounts(account_type: str="asset") -> list:
     """Get accounts from Firefly.
