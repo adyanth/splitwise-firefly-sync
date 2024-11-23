@@ -20,23 +20,28 @@ class SWBalanceTransactionStrategy(TransactionStrategy):
             'description': f"Cover for: {description}",
             'category_name': ''
         })
-        
+
         if float(owed_txn['amount']) != 0: # I paid; payment txn needed
             txns['paid'] = [owed_txn, cover_txn]
 
-        balance_txn = owed_txn.copy()
         if balance != 0: # I owe or am owed; balance txn needed
-            txns['balance'] = balance_txn
+            balance_txn = owed_txn.copy()
+            balance_txn.update({
+                'description': f"Balance transfer for: {description}",
+                'type': 'deposit' if balance > 0 else 'withdrawal'
+            })
+
             if balance > 0: # I am owed; difference credited to balance account
-                balance_txn['source_name'] = self._sw_balance_account + " balancer"
-                balance_txn['destination_name'] = self._sw_balance_account
-                balance_txn['type'] = 'deposit'
-                balance_txn['description'] = f"Balance transfer for: {description}"
-                balance_txn = self._apply_transaction_amount(balance_txn, exp, balance)
+                balance_txn.update({
+                    'source_name': self._sw_balance_account + " balancer",
+                    'destination_name': self._sw_balance_account
+                })
             else: # I owe; difference debited from balance account
-                balance_txn['source_name'] = self._sw_balance_account
-                balance_txn['destination_name'] = owed_txn['destination_name']
-                balance_txn['type'] = "withdrawal"
-                balance_txn['description'] = f"Balance transfer for: {description}"
-                balance_txn = self._apply_transaction_amount(balance_txn, exp, -balance)
+                balance_txn.update({
+                    'source_name': self._sw_balance_account,
+                    'destination_name': owed_txn['destination_name']
+                })
+                balance = -balance
+            balance_txn = self._apply_transaction_amount(balance_txn, exp, balance)
+            txns['balance'] = balance_txn
         return list(txns.values())
