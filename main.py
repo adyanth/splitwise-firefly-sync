@@ -4,6 +4,7 @@ from splitwise import Splitwise, Expense, User, Comment
 from splitwise.user import ExpenseUser
 from typing import Generator, TypedDict, Union
 from functools import wraps
+from typing import Union
 
 import os
 import requests
@@ -269,17 +270,24 @@ def updateTransaction(newTxn: dict, oldTxnBody: dict) -> None:
     print(f"Updated Transaction: {newTxn['description']}")
 
 
-def addTransaction(newTxn: dict) -> None:
+def addTransaction(newTxn: Union[dict, list[dict]], group_title=None) -> None:
     """
     Add a transaction to Firefly.
-    :param newTxn: A dictionary of the transaction body.
+
+    If newTxn is a dictionary, add a single transaction. If newTxn is a list of dictionaries, add a split transaction.
+
+    :param newTxn: A dictionary of the transaction body, or a list of such dictionaries for a split transaction.
+    :param group_title: The title of the transaction group. If None, use the description of the first transaction.
     :return: None
-    :raises: Exception if the transaction addition fails
+    :raises: Exception if the transaction add fails.
     """
+
+    txns: list[dict] = [newTxn] if isinstance(newTxn, dict) else newTxn
+    group_title = group_title or txns[0]["description"]
     body = {
         "error_if_duplicate_hash": True,
-        "group_title": newTxn["description"],
-        "transactions": [newTxn]
+        "group_title": group_title,
+        "transactions": txns
     }
     try:
         callApi("transactions", method="POST", body=body).json()
