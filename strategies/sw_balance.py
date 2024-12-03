@@ -41,7 +41,7 @@ class SWBalanceTransactionStrategy(TransactionStrategy):
             'category_name': ''
         })
 
-        if float(owed_txn['amount']) != 0: # I paid; payment txn needed
+        if float(myshare.getPaidShare()) != 0: # I paid; payment txn needed
             txns['paid'] = [owed_txn, cover_txn]
 
         if balance != 0: # I owe or am owed; balance txn needed
