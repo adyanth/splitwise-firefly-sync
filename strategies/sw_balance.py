@@ -48,7 +48,8 @@ class SWBalanceTransactionStrategy(TransactionStrategy):
             balance_txn = owed_txn.copy()
             balance_txn.update({
                 'description': f"Balance transfer for: {description}",
-                'type': 'deposit' if balance > 0 else 'withdrawal'
+                'type': 'deposit' if balance > 0 else 'withdrawal',
+                'category_name': ''
             })
 
             if balance > 0: # I am owed; difference credited to balance account
