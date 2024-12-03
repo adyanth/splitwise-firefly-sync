@@ -295,7 +295,7 @@ def addTransaction(newTxn: Union[dict, list[dict]], group_title=None) -> None:
         print(
             f"Transaction {newTxn['description']} errored, body: {body}, e: {e}")
         raise
-    print(f"Added Transaction: {newTxn['description']}")
+    print(f"Added Transaction: {group_title}")
 
 
 def processExpense(past_day: datetime, txns: dict[dict], exp: Expense, *args) -> None:
