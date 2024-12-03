@@ -4,11 +4,31 @@ from splitwise.user import ExpenseUser
 
 class SWBalanceTransactionStrategy(TransactionStrategy):
     def __init__(self, get_expense_transaction_body, sw_balance_account, apply_transaction_amount) -> None:
+        """
+        Initialize the SWBalanceTransactionStrategy.
+
+        :param get_expense_transaction_body: Function to get the transaction body for the expense. Must take the expense, user's share, and additional data as arguments.
+        :param sw_balance_account: Name of the Splitwise balance account for the user.
+        :param apply_transaction_amount: Function to apply the transaction amount to the transaction body. Must take the transaction body, expense, and amount as arguments.
+        """
+
         self._get_expense_transaction_body = get_expense_transaction_body
         self._sw_balance_account = sw_balance_account
         self._apply_transaction_amount = apply_transaction_amount
 
     def create_transactions(self, exp: Expense, myshare: ExpenseUser, data: list[str]) -> list[dict]:
+        """
+        Create transactions for the given expense and user's share of the expense.
+        
+        Create transactions for the expense using the provided function to get the transaction from the expense, user's share, and additional data.
+        If the user paid for the expense, create a payment withdrawal transaction and a cover deposit transaction to the Splitwise balance. Split the payment transaction to the owed amount and the cover amount.
+        If the user owes money for the expense, create a balance transfer withdrawal transaction from the Splitwise balance account.
+
+        :param exp: Expense to create transactions from
+        :param myshare: ExpenseUser object representing the user's share in the expense
+        :param data: List of strings containing additional data for the transaction
+        """
+        
         txns = {}
         owed_txn = self._get_expense_transaction_body(exp, myshare, data)
         description = owed_txn['description']
