@@ -24,7 +24,7 @@ When enabled, tracks Splitwise payable and receivable debts in an account define
 For example, assume you paid 100$ but your share was only 40$. Splitwise records correctly that you are owed 60$ - so your total assets haven't really decreased by 100$, only by 40$. Enabling this feature correctly tracks this in Firefly, without compromising on recording the real 100$ transaction you will see in your bank statement.
 
 For each Splitwise expense, create two Firefly transactions: 
-1. A withdrawal from a real account, recording the real amount of money paid in the expense
+1. A withdrawal from a real account, recording the real amount of money paid in the expense. The withdrawal is split in two parts - the owed amount and the remainder. This allows, for example, to assign only the owed part to a budget.
 2. A deposit to the `SW_BALANCE_ACCOUNT` equal the difference between the amount paid and the amount owed.
 
 ## Note/Comment format
