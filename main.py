@@ -293,7 +293,7 @@ def addTransaction(newTxn: Union[dict, list[dict]], group_title=None) -> None:
         callApi("transactions", method="POST", body=body).json()
     except Exception as e:
         print(
-            f"Transaction {newTxn['description']} errored, body: {body}, e: {e}")
+            f"Transaction {group_title} errored, body: {body}, e: {e}")
         raise
     print(f"Added Transaction: {group_title}")
 
