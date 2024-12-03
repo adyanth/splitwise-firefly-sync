@@ -52,8 +52,11 @@ def test_sw_balance_strategy():
     transactions = strategy.create_transactions(mock_expense, mock_user, [])
     
     assert len(transactions) == 2
-    assert transactions[0]["amount"] == "110.00"
-    assert transactions[0]["description"] == "Test Expense"
+    assert transactions[0][0]["amount"] == "60.00"
+    assert transactions[0][0]["description"] == "Test Expense"
+    assert float(transactions[0][1]["amount"]) == float("50.00")
+    assert transactions[0][1]["description"] == "Cover for: Test Expense"
+    assert transactions[0][1]["category_name"] == ""
     assert float(transactions[1]["amount"]) == float("50.00")
     assert transactions[1]["type"] == "deposit"
     assert transactions[1]["destination_name"] == "Splitwise Balance"
