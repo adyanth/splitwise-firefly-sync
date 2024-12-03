@@ -310,12 +310,16 @@ def processExpense(past_day: datetime, txns: dict[dict], exp: Expense, *args) ->
     """
 
     strategy = get_transaction_strategy()
-    new_txns: list[dict] = strategy.create_transactions(exp, *args)
+    new_txns: list = strategy.create_transactions(exp, *args)
     for idx, new_txn in enumerate(new_txns):
         external_url = getSWUrlForExpense(exp)
         if idx > 0:
             external_url += f"-balance_transfer-{idx}"
-        new_txn["external_url"] = external_url
+        if isinstance(new_txn, dict):
+            new_txn["external_url"] = external_url
+        else:
+            for split in new_txn:
+                split["external_url"] = external_url
         
         if oldTxnBody := txns.get(external_url):
             print(f"Updating transaction {idx + 1}...")
