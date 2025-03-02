@@ -240,34 +240,45 @@ def updateTransaction(newTxn: dict, oldTxnBody: dict) -> None:
     """
     old_id = oldTxnBody["id"]
     oldTxnBody = oldTxnBody["attributes"]
+    oldTxns = oldTxnBody["transactions"]
+    newTxns: list[dict] = [newTxn] if isinstance(newTxn, dict) else newTxn
 
-    for k, val in newTxn.items():
-        if (old := oldTxnBody["transactions"][0][k]) != val:
-            # Firefly has a lot of 0 after decimal
-            if k == "amount" and float(old) == float(val):
-                continue
-            # Firefly stores time with timezone
-            # See https://github.com/firefly-iii/firefly-iii/issues/6810
-            if k == "date" or k == "payment_date":
-                if getDate(old) == getDate(val):
+    if len(newTxns) > 1:
+        # order lists so that the first element is the one that is not the balance account transaction
+        cover_new = [txn for txn in newTxns if txn['description'].startswith('Cover for:')]
+        cover_old = [txn for txn in oldTxns if txn['description'].startswith('Cover for:')]
+        newTxns = [txn for txn in newTxns if not txn['description'].startswith('Cover for:')] + cover_new
+        oldTxns = [txn for txn in oldTxns if not txn['description'].startswith('Cover for:')] + cover_old
+
+    for old, new in zip(oldTxns, newTxns):
+        for k, new_val in new.items():
+            if (old_val := old[k]) != new_val:
+                # Firefly has a lot of 0 after decimal
+                if k == "amount" and float(old_val) == float(new_val):
                     continue
-            break
-    else:
-        print(f"No update needed for {newTxn['description']}")
-        return
+                # Firefly stores time with timezone
+                # See https://github.com/firefly-iii/firefly-iii/issues/6810
+                if k == "date" or k == "payment_date":
+                    if getDate(old_val) == getDate(new_val):
+                        continue
+                break
+        else:
+            print(f"No update needed for {new['description']}")
+            return
 
-    oldTxnBody["transactions"][0].update(newTxn)
+        old.update(new)
 
-    # https://github.com/firefly-iii/firefly-iii/issues/6828
-    del oldTxnBody["transactions"][0]["foreign_currency_id"]
+        # https://github.com/firefly-iii/firefly-iii/issues/6828
+        del old["foreign_currency_id"]
 
+    oldTxnBody["transactions"] = oldTxns
+    descriptions = ','.join([txn['description'] for txn in oldTxns])
     try:
         callApi(f"transactions/{old_id}", method="PUT", body=oldTxnBody).json()
     except Exception as e:
-        print(
-            f"Transaction {newTxn['description']} errored, body: {oldTxnBody}, e: {e}")
+        print(f"Transactions {descriptions} errored, body: {oldTxnBody}, e: {e}")
         raise
-    print(f"Updated Transaction: {newTxn['description']}")
+    print(f"Updated Transactions: {descriptions}")
 
 
 def addTransaction(newTxn: Union[dict, list[dict]], group_title=None) -> None:
