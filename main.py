@@ -39,6 +39,7 @@ def load_config() -> Config:
         "FOREIGN_CURRENCY_TOFIX_TAG": os.getenv("FOREIGN_CURRENCY_TOFIX_TAG"),
         "SW_BALANCE_ACCOUNT": os.getenv("SW_BALANCE_ACCOUNT", False),
         "SW_BALANCE_DEFAULT_DESCRIPTION": os.getenv("SW_BALANCE_DEFAULT_DESCRIPTION", "Splitwise balance"),
+        "SPLITWISE_FIELD_SEPARATOR": os.getenv("SPLITWISE_FIELD_SEPARATOR", "/")
     }
 
 time_now = datetime.now().astimezone()
@@ -156,7 +157,7 @@ def processText(text: str) -> list[str]:
     """
     if not text:
         return []
-    split = text.split("/")
+    split = text.split(conf["SPLITWISE_FIELD_SEPARATOR"])
     if split[0].strip().lower() == "firefly":
         return split[1:] or [True]
     return []
