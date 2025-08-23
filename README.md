@@ -17,6 +17,7 @@ Set these variables either in the environment or a `.env` file along with the sc
 7. `FIREFLY_DRY_RUN`: Set this to any value to dry run and skip the firefly API call.
 8. `SPLITWISE_DAYS=1`
 9. `SW_BALANCE_ACCOUNT=Splitwise balance`: Set this to the name of the virtual Splitwise balance asset account on Firefly to enable the debt tracking feature.
+10. `SPLITWISE_FIELD_SEPARATOR=/`: Set this to something else to use a custom separator in case any of the field values contain a `/`.
 
 ## Debt tracking feature
 When enabled, tracks Splitwise payable and receivable debts in an account defined by `SW_BALANCE_ACCOUNT`.

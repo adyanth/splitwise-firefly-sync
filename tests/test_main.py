@@ -77,14 +77,19 @@ def test_getDate():
     assert result.month == 9
     assert result.day == 10
 
-@pytest.mark.parametrize("text,expected", [
-    ("firefly/category/description", ["category", "description"]),
-    ("firefly", [True]),
-    ("normal text", []),
+@pytest.mark.parametrize("text,expected,separator", [
+    ("firefly/category/description", ["category", "description"], None),
+    ("firefly", [True], None),
+    ("firefly|custom|sep", ["custom", "sep"], "|"),
+    ("firefly,custom/with/slash,sep", ["custom/with/slash", "sep"], ","),
 ])
-def test_processText(text, expected):
-    processText = load_main().processText
+def test_processText(text, expected, separator):
+    main = load_main()
+    processText = main.processText
+    if separator:
+        main.conf["SPLITWISE_FIELD_SEPARATOR"] = separator
     assert processText(text) == expected
+    main.conf["SPLITWISE_FIELD_SEPARATOR"] = "/"
 
 @patch('requests.request')
 def test_callApi(mock_request):
